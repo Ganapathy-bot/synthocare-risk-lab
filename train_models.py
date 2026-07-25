@@ -290,6 +290,14 @@ def main() -> None:
     size_mb = out_path.stat().st_size / 1e6
     print("\n" + "=" * 70)
     print(f"Saved: {out_path} ({size_mb:.2f} MB compressed)")
+    # Export pure-JSON inference for fast Streamlit Cloud runtime (no sklearn)
+    try:
+        from export_fast_model import main as export_fast
+
+        export_fast()
+    except Exception as exc:  # pragma: no cover
+        print(f"Warning: could not export fast_inference.json: {exc}")
+        print("Run manually: python export_fast_model.py")
     print("Run: streamlit run streamlit_app.py")
     print("=" * 70)
 

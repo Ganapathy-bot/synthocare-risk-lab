@@ -74,15 +74,20 @@ python generate_dataset.py --n-patients 3000 --seed 42
 
 Outputs: `data/clean/`, `data/noisy/`, `reports/`.
 
-### 3. Train models
+### 3. Train models (+ fast Cloud export)
 
 ```bash
 python train_models.py
+# or, if joblib already exists:
+python export_fast_model.py
 ```
 
-Writes: `models/streamlit_disease_models.joblib`, `models/training_metrics.json`.
+Writes:
+- `models/streamlit_disease_models.joblib` (sklearn training artifact)
+- `models/fast_inference.json` (**used by the live Streamlit app** — pure NumPy, no sklearn)
+- `models/training_metrics.json`
 
-> A pre-trained model bundle may already be in `models/` so the Streamlit app can run without re-training. Re-train after regenerating data for consistency.
+> The live app only needs `fast_inference.json` + `streamlit` + `numpy` (see slim `requirements.txt`).
 
 ### 4. Launch Streamlit (local)
 

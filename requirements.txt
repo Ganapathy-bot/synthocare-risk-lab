@@ -1,7 +1,4 @@
-# Streamlit Community Cloud — versions compatible with trained model bundle
+# Minimal deps for Streamlit Community Cloud cold starts
+# Training still needs scikit-learn locally (not required to run the app)
 streamlit==1.41.1
-pandas==2.2.3
 numpy==2.1.3
-scikit-learn==1.7.2
-joblib==1.4.2
-scipy==1.14.1

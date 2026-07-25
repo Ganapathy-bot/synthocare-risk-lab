@@ -1,22 +1,23 @@
 #!/usr/bin/env python3
 """
-SynthoCare — fast Streamlit demo for synthetic multi-disease risk models.
+SynthoCare — Streamlit demo optimized for Community Cloud cold starts.
 
-NOT FOR CLINICAL USE. Research / education only.
-Optimized for Streamlit Community Cloud cold-start and prediction latency.
+Runtime deps: streamlit + numpy only (no scikit-learn / joblib / pandas).
+Models loaded from models/fast_inference.json (pure logistic coefficients).
+
+NOT FOR CLINICAL USE — synthetic research demo only.
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
-import joblib
 import numpy as np
-import pandas as pd
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parent
-MODEL_PATH = ROOT / "models" / "streamlit_disease_models.joblib"
+FAST_MODEL = ROOT / "models" / "fast_inference.json"
 
 st.set_page_config(
     page_title="SynthoCare Risk Lab",
@@ -25,7 +26,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Compact CSS — no external font CDN (faster first paint on Cloud)
 APP_CSS = """
 <style>
 html, body, [class*="css"] { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
@@ -44,8 +44,8 @@ section[data-testid="stSidebar"] * { color: #f3fbfc !important; }
 .hero p { margin: 0; opacity: .92; max-width: 640px; line-height: 1.5; }
 .kicker {
   display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
-  padding: .3rem .7rem; border-radius: 999px; margin-bottom: .75rem;
+  text-transform: uppercase; background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.22); padding: .3rem .7rem; border-radius: 999px; margin-bottom: .75rem;
 }
 .alert {
   background: #fff8ea; border: 1px solid #f0d7a8; border-left: 5px solid #d4a017;
@@ -75,12 +75,24 @@ section[data-testid="stSidebar"] * { color: #f3fbfc !important; }
 """
 
 
-@st.cache_resource(show_spinner="Loading models (first visit only)…")
-def load_bundle():
-    """Load once per server process — critical for Cloud speed after cold start."""
-    if not MODEL_PATH.exists():
+@st.cache_resource(show_spinner=False)
+def load_fast_model() -> dict | None:
+    if not FAST_MODEL.exists():
         return None
-    return joblib.load(MODEL_PATH)
+    with FAST_MODEL.open(encoding="utf-8") as f:
+        data = json.load(f)
+    # Pre-convert arrays once for speed
+    data["_num_fill"] = np.asarray(data["num_fill"], dtype=np.float64)
+    data["_mean"] = np.asarray(data["scaler_mean"], dtype=np.float64)
+    data["_scale"] = np.asarray(data["scaler_scale"], dtype=np.float64)
+    data["_heads_np"] = {
+        k: {
+            "coef": np.asarray(v["coef"], dtype=np.float64),
+            "intercept": float(v["intercept"]),
+        }
+        for k, v in data["heads"].items()
+    }
+    return data
 
 
 def risk_band(p: float) -> str:
@@ -93,36 +105,74 @@ def risk_band(p: float) -> str:
     return "Higher"
 
 
-def build_input_row(bundle: dict, values: dict) -> pd.DataFrame:
-    row = {f: values.get(f, bundle["feature_defaults"].get(f, np.nan)) for f in bundle["all_features"]}
-    return pd.DataFrame([row])
+def _sigmoid(z: float) -> float:
+    if z >= 0:
+        ez = np.exp(-z)
+        return float(1.0 / (1.0 + ez))
+    ez = np.exp(z)
+    return float(ez / (1.0 + ez))
 
 
-def predict_all(bundle: dict, X: pd.DataFrame) -> list[dict]:
-    """Transform features once, then score all disease heads (fast path)."""
-    models = bundle["models"]
-    diseases = bundle["diseases"]
-    labels = bundle["disease_labels"]
+def transform_features(model: dict, values: dict) -> np.ndarray:
+    """Median-impute + scale numerics, one-hot categoricals — mirrors training preprocessor."""
+    num_feats = model["numeric_features"]
+    cat_feats = model["categorical_features"]
+    fill = model["_num_fill"]
+    mean = model["_mean"]
+    scale = model["_scale"]
+    categories = model["categories"]
 
-    # New format: shared preprocessor + linear heads
-    if bundle.get("format") == "shared_preprocessor_v2" and "preprocessor" in bundle:
-        Xt = bundle["preprocessor"].transform(X)
-        rows = []
-        for d in diseases:
-            if d not in models:
-                continue
-            proba = float(models[d].predict_proba(Xt)[0, 1])
-            rows.append({"Condition": labels[d], "Probability": proba, "Risk band": risk_band(proba)})
-        return rows
+    x_num = np.empty(len(num_feats), dtype=np.float64)
+    for i, f in enumerate(num_feats):
+        v = values.get(f, np.nan)
+        try:
+            fv = float(v)
+            if np.isnan(fv):
+                fv = fill[i]
+        except (TypeError, ValueError):
+            fv = fill[i]
+        x_num[i] = (fv - mean[i]) / scale[i]
 
-    # Legacy: full sklearn Pipeline per disease
+    cat_blocks = []
+    for j, f in enumerate(cat_feats):
+        cats = categories[j]
+        raw = values.get(f, model["feature_defaults"].get(f, cats[0] if cats else ""))
+        s = str(raw)
+        one = np.zeros(len(cats), dtype=np.float64)
+        if s in cats:
+            one[cats.index(s)] = 1.0
+        elif cats:
+            # unknown → all zeros (OneHotEncoder handle_unknown=ignore)
+            pass
+        cat_blocks.append(one)
+
+    if cat_blocks:
+        return np.concatenate([x_num] + cat_blocks)
+    return x_num
+
+
+def predict_all(model: dict, values: dict) -> list[dict]:
+    x = transform_features(model, values)
     rows = []
-    for d in diseases:
-        if d not in models:
+    labels = model["disease_labels"]
+    for d in model["diseases"]:
+        head = model["_heads_np"].get(d)
+        if head is None:
             continue
-        proba = float(models[d].predict_proba(X)[0, 1])
-        rows.append({"Condition": labels[d], "Probability": proba, "Risk band": risk_band(proba)})
+        z = float(np.dot(x, head["coef"]) + head["intercept"])
+        p = _sigmoid(z)
+        rows.append({"Condition": labels[d], "Probability": p, "Risk band": risk_band(p)})
+    rows.sort(key=lambda r: r["Probability"], reverse=True)
     return rows
+
+
+def predict_one(model: dict, values: dict, key: str) -> float | None:
+    head = model["_heads_np"].get(key)
+    if head is None:
+        return None
+    x = transform_features(model, values)
+    z = float(np.dot(x, head["coef"]) + head["intercept"])
+    return _sigmoid(z)
 
 
 def main() -> None:
@@ -130,78 +180,67 @@ def main() -> None:
 
     with st.sidebar:
         st.markdown("### 🧬 SynthoCare")
-        st.caption("Synthetic risk lab · research demo")
+        st.caption("Fast synthetic risk demo")
         page = st.radio(
             "Navigate",
             ["Home", "Risk prediction", "Model metrics", "About & limits"],
             label_visibility="collapsed",
         )
         st.markdown("---")
-        st.caption("Fast demo · synthetic only · not clinical")
+        st.caption("numpy inference · no sklearn runtime · not clinical")
 
-    # Lazy-load models only when needed (Home/About stay light)
-    needs_model = page in ("Risk prediction", "Model metrics")
-    bundle = None
-    if needs_model:
-        bundle = load_bundle()
-        if bundle is None:
-            st.error(
-                "Model file missing. On Cloud, ensure `models/streamlit_disease_models.joblib` "
-                "is in the GitHub repo. Locally run `python train_models.py`."
-            )
-            return
-
+    # Home never loads the model file
     if page == "Home":
         render_home()
-    elif page == "Risk prediction":
-        render_predict(bundle)
+        return
+
+    model = load_fast_model()
+    if model is None:
+        st.error(
+            f"Missing `{FAST_MODEL.name}`. "
+            "Rebuild with: `python train_models.py && python export_fast_model.py`"
+        )
+        return
+
+    if page == "Risk prediction":
+        render_predict(model)
     elif page == "Model metrics":
-        render_metrics(bundle)
+        render_metrics(model)
     else:
-        render_about(bundle if bundle else load_bundle())
+        render_about(model)
 
 
 def render_home() -> None:
-    # CSS-only hero (no large base64 image) — much faster first paint
     st.markdown(
         """
 <div class="hero">
-  <div class="kicker">Synthetic · Research · Education</div>
+  <div class="kicker">Synthetic · Research · Education · Fast Cloud</div>
   <h1>Chronic disease risk models<br/>built on synthetic patients</h1>
-  <p>Multi-condition screening demo trained on computer-generated longitudinal data.
-  Fast cloud-ready models for pipeline teaching — not for real patient care.</p>
+  <p>Lightweight demo: pure NumPy inference for quick Streamlit Cloud starts.
+  Not for real patient care.</p>
 </div>
-<div class="alert"><strong>Important:</strong> Outputs are synthetic-model scores only.
-They must not be used to diagnose, screen, or manage real patients.</div>
+<div class="alert"><strong>Important:</strong> Synthetic-model scores only —
+do not use for diagnosis or clinical decisions.</div>
 <div class="stat-row">
   <div class="stat"><div class="n">3,000</div><div class="l">Synthetic patients</div></div>
   <div class="stat"><div class="n">10</div><div class="l">Chronic conditions</div></div>
-  <div class="stat"><div class="n">11</div><div class="l">Model heads</div></div>
-  <div class="stat"><div class="n">70/15/15</div><div class="l">Train / val / test</div></div>
+  <div class="stat"><div class="n">JSON</div><div class="l">Tiny model file</div></div>
+  <div class="stat"><div class="n">Fast</div><div class="l">No sklearn at runtime</div></div>
 </div>
 <div class="card-grid">
   <div class="card"><h3>🎯 Multi-disease demo</h3>
-  <p>Score diabetes, CKD, CAD, HF, hypertension, COPD, liver disease, RA, thyroid, cognition.</p></div>
+  <p>Score 10 chronic conditions from encounter-style inputs.</p></div>
   <div class="card"><h3>⚡ Cloud-optimized</h3>
-  <p>Shared preprocessor + light linear models for quick cold starts and instant predictions.</p></div>
+  <p>Only Streamlit + NumPy. Home page loads without the model.</p></div>
   <div class="card"><h3>📊 Transparent metrics</h3>
-  <p>Hold-out AUROC/AUPRC on synthetic partitions — not clinical proof.</p></div>
+  <p>Synthetic hold-out scores — not clinical validation.</p></div>
 </div>
 """,
         unsafe_allow_html=True,
     )
-    st.markdown("#### Conditions in scope")
     chips = [
-        "Type 2 diabetes",
-        "CKD",
-        "CAD",
-        "Heart failure",
-        "Hypertension",
-        "COPD",
-        "CLD / MASLD",
-        "RA",
-        "Hypothyroidism",
-        "Cognitive decline",
+        "Type 2 diabetes", "CKD", "CAD", "Heart failure", "Hypertension",
+        "COPD", "CLD / MASLD", "RA", "Hypothyroidism", "Cognitive decline",
     ]
     st.markdown(
         '<div class="chip-row">' + "".join(f'<span class="chip">{c}</span>' for c in chips) + "</div>",
@@ -210,18 +249,18 @@ They must not be used to diagnose, screen, or manage real patients.</div>
     st.info("Open **Risk prediction** in the sidebar to run a scenario.")
 
 
-def render_predict(bundle: dict) -> None:
+def render_predict(model: dict) -> None:
     st.markdown(
         """
 <div class="page-head">
   <h1>Risk prediction</h1>
-  <p>Enter a synthetic encounter scenario. Leave labs blank if unknown.</p>
+  <p>Synthetic encounter scenario. Labs optional.</p>
 </div>
-<div class="alert"><strong>Demo only:</strong> Probabilities are not clinical diagnoses.</div>
+<div class="alert"><strong>Demo only:</strong> Not a clinical diagnosis.</div>
 """,
         unsafe_allow_html=True,
     )
-    defaults = bundle["feature_defaults"]
+    defaults = model["feature_defaults"]
 
     with st.expander("👤 Demographics & body measures", expanded=True):
         c1, c2, c3 = st.columns(3)
@@ -324,14 +363,14 @@ def render_predict(bundle: dict) -> None:
     with st.expander("👪 Family history", expanded=False):
         fh = {}
         fhc = st.columns(5)
-        for i, d in enumerate(bundle["diseases"]):
+        for i, d in enumerate(model["diseases"]):
             with fhc[i % 5]:
                 fh[f"fh_{d}"] = int(
-                    st.checkbox(bundle["disease_labels"][d], value=False, key=f"fh_{d}")
+                    st.checkbox(model["disease_labels"][d], value=False, key=f"fh_{d}")
                 )
 
     with st.expander("🔬 Labs (optional)", expanded=False):
-        st.caption("Leave unchecked to treat as missing.")
+        st.caption("Leave unchecked = missing.")
         lab_defs = [
             ("lab_hba1c", "HbA1c (%)", 4.0, 15.0),
             ("lab_fasting_plasma_glucose", "Fasting glucose", 50.0, 400.0),
@@ -356,7 +395,7 @@ def render_predict(bundle: dict) -> None:
             with lc[i % 4]:
                 use = st.checkbox(f"Provide {label}", value=False, key=f"use_{key}")
                 if use:
-                    default = float(np.clip(defaults.get(key, (lo + hi) / 2), lo, hi))
+                    default = float(np.clip(float(defaults.get(key, (lo + hi) / 2)), lo, hi))
                     labs[key] = st.number_input(label, lo, hi, default, key=f"val_{key}")
                 else:
                     labs[key] = np.nan
@@ -388,81 +427,67 @@ def render_predict(bundle: dict) -> None:
         **fh,
         **labs,
     }
-    X = build_input_row(bundle, values)
 
-    with st.spinner("Scoring…"):
-        rows = predict_all(bundle, X)
+    rows = predict_all(model, values)
+    # Display table without pandas
+    st.markdown("### Results")
+    st.dataframe(
+        [
+            {
+                "Condition": r["Condition"],
+                "Probability": f"{r['Probability']:.1%}",
+                "Risk band": r["Risk band"],
+            }
+            for r in rows
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
+    chart_data = {r["Condition"]: r["Probability"] for r in rows}
+    st.bar_chart(chart_data, color="#0f5c6e")
 
-    result = pd.DataFrame(rows).sort_values("Probability", ascending=False)
-    display = result.copy()
-    display["Probability"] = display["Probability"].map(lambda x: f"{x:.1%}")
-
-    left, right = st.columns([1.1, 1])
-    with left:
-        st.dataframe(
-            display[["Condition", "Probability", "Risk band"]],
-            use_container_width=True,
-            hide_index=True,
-        )
-    with right:
-        st.bar_chart(result.set_index("Condition")["Probability"], color="#0f5c6e")
-
-    models = bundle["models"]
-    if "hospitalization_12m" in models:
-        if bundle.get("format") == "shared_preprocessor_v2":
-            Xt = bundle["preprocessor"].transform(X)
-            ph = float(models["hospitalization_12m"].predict_proba(Xt)[0, 1])
-        else:
-            ph = float(models["hospitalization_12m"].predict_proba(X)[0, 1])
+    ph = predict_one(model, values, "hospitalization_12m")
+    if ph is not None:
         st.metric("Synthetic 12-month hospitalization proxy", f"{ph:.1%}")
 
-    top = result.iloc[0]
+    top = rows[0]
     st.success(
         f"Highest score: **{top['Condition']}** at **{top['Probability']:.1%}** "
         f"({top['Risk band']}) — demo only."
     )
 
 
-def render_metrics(bundle: dict) -> None:
+def render_metrics(model: dict) -> None:
     st.markdown(
         """
 <div class="page-head">
   <h1>Model metrics</h1>
-  <p>Synthetic hold-out performance (not clinical validation).</p>
+  <p>Synthetic hold-out only — not clinical validation.</p>
 </div>
 """,
         unsafe_allow_html=True,
     )
-    metrics = bundle.get("metrics", [])
+    metrics = model.get("metrics", [])
     if not metrics:
         st.write("No metrics stored.")
         return
-    mdf = pd.DataFrame(metrics)
-    show = [
-        c
-        for c in [
-            "target",
-            "n_train",
-            "n_val",
-            "n_test",
-            "val_auroc",
-            "val_auprc",
-            "test_auroc",
-            "test_auprc",
-        ]
-        if c in mdf.columns
-    ]
-    st.dataframe(mdf[show], use_container_width=True, hide_index=True)
-    if "test_auroc" in mdf.columns:
-        st.bar_chart(mdf.dropna(subset=["test_auroc"]).set_index("target")["test_auroc"], color="#147a8a")
+    st.dataframe(metrics, use_container_width=True, hide_index=True)
+    aurocs = {
+        m["target"].replace("disease_present_at_encounter_", ""): m["test_auroc"]
+        for m in metrics
+        if m.get("test_auroc") is not None
+    }
+    if aurocs:
+        st.markdown("#### Test AUROC")
+        st.bar_chart(aurocs, color="#147a8a")
 
 
-def render_about(bundle) -> None:
+def render_about(model: dict) -> None:
     st.markdown(
         """
 <div class="page-head">
   <h1>About & limits</h1>
-  <p>Intended use and non-clinical disclaimer.</p>
+  <p>Intended use and performance notes.</p>
 </div>
 """,
         unsafe_allow_html=True,
@@ -474,18 +499,18 @@ def render_about(bundle) -> None:
         st.markdown("### 🚫 Prohibited\n- Real diagnosis\n- Clinical decisions\n- Regulatory claims")
     st.markdown(
         """
-### Performance tips
-- First open after idle can take longer (Streamlit Cloud **cold start**).
-- Home page no longer loads the model bundle.
-- Predictions use one shared transform + light linear heads.
+### Why this app is faster
+- Runtime packages: **streamlit + numpy only** (no scikit-learn/pandas/scipy install)
+- Model: small **JSON** coefficients (`models/fast_inference.json`)
+- Home page does **not** load the model
+- Still subject to Streamlit free-tier **cold start** if the app was idle
 """
     )
-    if bundle:
-        st.code(bundle.get("disclaimer", ""), language=None)
-        st.caption(
-            f"Model v{bundle.get('model_version')} · format {bundle.get('format')} · "
-            f"generator {bundle.get('generator_version')}"
-        )
+    st.code(model.get("disclaimer", ""), language=None)
+    st.caption(
+        f"Model v{model.get('model_version')} · format {model.get('format')} · "
+        f"generator {model.get('generator_version')}"
+    )
 
 
 if __name__ == "__main__":
