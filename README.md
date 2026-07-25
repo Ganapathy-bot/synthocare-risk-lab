@@ -84,13 +84,38 @@ Writes: `models/streamlit_disease_models.joblib`, `models/training_metrics.json`
 
 > A pre-trained model bundle may already be in `models/` so the Streamlit app can run without re-training. Re-train after regenerating data for consistency.
 
-### 4. Launch Streamlit
+### 4. Launch Streamlit (local)
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
 Open **http://localhost:8501**
+
+### 5. Deploy live on Streamlit Community Cloud
+
+1. Open: [https://share.streamlit.io/deploy](https://share.streamlit.io/deploy)
+2. Sign in with **GitHub**
+3. Select repository: **`Ganapathy-bot/synthocare-risk-lab`**
+4. Branch: **`main`**
+5. Main file path: **`streamlit_app.py`**
+6. Click **Deploy**
+
+Direct deploy link (after GitHub auth):
+
+[https://share.streamlit.io/deploy?repository=Ganapathy-bot/synthocare-risk-lab&branch=main&mainModule=streamlit_app.py](https://share.streamlit.io/deploy?repository=Ganapathy-bot/synthocare-risk-lab&branch=main&mainModule=streamlit_app.py)
+
+Cloud settings used by this repo:
+
+| Setting | Value |
+|---------|--------|
+| App file | `streamlit_app.py` |
+| Requirements | `requirements.txt` |
+| Python | `runtime.txt` → 3.11 |
+| Model bundle | `models/streamlit_disease_models.joblib` (committed) |
+| Theme | `.streamlit/config.toml` |
+
+No dataset generation is required on Cloud — the pre-trained model is already in the repo.
 
 | Page | Description |
 |------|-------------|
