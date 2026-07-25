@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Train multi-disease screening models on the synthetic cohort for Streamlit use.
+Train lightweight multi-disease models optimized for Streamlit Cloud.
 
 SYNTHETIC DATA ONLY — research / demo / education.
-Models are NOT clinically validated and must not be used for patient care.
+Not for clinical use.
 """
 
 from __future__ import annotations
@@ -15,15 +15,11 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.impute import SimpleImputer
-from sklearn.metrics import (
-    average_precision_score,
-    brier_score_loss,
-    roc_auc_score,
-)
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import average_precision_score, brier_score_loss, roc_auc_score
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, OrdinalEncoder
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 ROOT = Path(__file__).resolve().parent
 DATA_PATH = ROOT / "data" / "clean" / "flat_encounter_level.csv"
@@ -56,7 +52,6 @@ DISEASE_LABELS = {
     "alzheimers": "Alzheimer’s / cognitive decline",
 }
 
-# Features available at prediction time (no latent / target leakage)
 NUMERIC_FEATURES = [
     "age_at_encounter",
     "bmi",
@@ -133,7 +128,6 @@ def load_data() -> pd.DataFrame:
             f"Missing {DATA_PATH}. Run: python generate_dataset.py --n-patients 3000 --seed 42"
         )
     df = pd.read_csv(DATA_PATH)
-    # Ensure family-history columns exist (from patient merge)
     for d in DISEASES:
         col = f"fh_{d}"
         if col not in df.columns:
@@ -142,19 +136,16 @@ def load_data() -> pd.DataFrame:
 
 
 def make_preprocessor() -> ColumnTransformer:
-    # HistGradientBoosting handles NaN for numeric; still impute categoricals after OHE
     numeric = Pipeline(
         steps=[
-            ("imputer", SimpleImputer(strategy="median", add_indicator=True)),
+            ("imputer", SimpleImputer(strategy="median")),
+            ("scaler", StandardScaler()),
         ]
     )
     categorical = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="most_frequent")),
-            (
-                "onehot",
-                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
-            ),
+            ("onehot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
         ]
     )
     return ColumnTransformer(
@@ -165,86 +156,19 @@ def make_preprocessor() -> ColumnTransformer:
     )
 
 
-def train_binary_model(
-    train: pd.DataFrame,
-    val: pd.DataFrame,
-    target: str,
-    random_state: int = 42,
-) -> tuple[Pipeline, dict]:
-    y_train = train[target].astype(int)
-    y_val = val[target].astype(int)
-
-    # Drop ineligible if any (-1)
-    tr_mask = y_train >= 0
-    va_mask = y_val >= 0
-    X_train = train.loc[tr_mask, ALL_FEATURES]
-    y_train = y_train.loc[tr_mask]
-    X_val = val.loc[va_mask, ALL_FEATURES]
-    y_val = y_val.loc[va_mask]
-
-    if y_train.nunique() < 2:
-        raise ValueError(f"Target {target} has <2 classes in train")
-
-    # Class imbalance
-    n_pos = int((y_train == 1).sum())
-    n_neg = int((y_train == 0).sum())
-    w_pos = n_neg / max(n_pos, 1)
-    sample_weight = np.where(y_train == 1, w_pos, 1.0)
-
-    pipe = Pipeline(
-        steps=[
-            ("prep", make_preprocessor()),
-            (
-                "clf",
-                HistGradientBoostingClassifier(
-                    max_depth=6,
-                    max_iter=200,
-                    learning_rate=0.08,
-                    min_samples_leaf=25,
-                    l2_regularization=0.1,
-                    random_state=random_state,
-                    class_weight=None,  # use sample_weight instead
-                ),
-            ),
-        ]
-    )
-    pipe.fit(X_train, y_train, clf__sample_weight=sample_weight)
-
-    proba = pipe.predict_proba(X_val)[:, 1]
-    metrics = {
-        "target": target,
-        "n_train": int(len(y_train)),
-        "n_val": int(len(y_val)),
-        "train_prevalence": float(y_train.mean()),
-        "val_prevalence": float(y_val.mean()),
-        "val_auroc": float(roc_auc_score(y_val, proba)) if y_val.nunique() > 1 else None,
-        "val_auprc": float(average_precision_score(y_val, proba)) if y_val.nunique() > 1 else None,
-        "val_brier": float(brier_score_loss(y_val, proba)),
-    }
-    return pipe, metrics
-
-
-def evaluate_test(pipe: Pipeline, test: pd.DataFrame, target: str) -> dict:
-    y = test[target].astype(int)
-    mask = y >= 0
-    X = test.loc[mask, ALL_FEATURES]
-    y = y.loc[mask]
-    if len(y) == 0 or y.nunique() < 2:
-        return {"target": target, "test_auroc": None, "test_auprc": None, "n_test": int(len(y))}
-    proba = pipe.predict_proba(X)[:, 1]
+def eval_binary(y_true: np.ndarray, proba: np.ndarray) -> dict:
+    if len(np.unique(y_true)) < 2:
+        return {"auroc": None, "auprc": None, "brier": None}
     return {
-        "target": target,
-        "n_test": int(len(y)),
-        "test_prevalence": float(y.mean()),
-        "test_auroc": float(roc_auc_score(y, proba)),
-        "test_auprc": float(average_precision_score(y, proba)),
-        "test_brier": float(brier_score_loss(y, proba)),
+        "auroc": float(roc_auc_score(y_true, proba)),
+        "auprc": float(average_precision_score(y_true, proba)),
+        "brier": float(brier_score_loss(y_true, proba)),
     }
 
 
 def main() -> None:
     print("=" * 70)
-    print("Training synthetic multi-disease models for Streamlit")
+    print("Training LIGHTWEIGHT models for fast Streamlit Cloud")
     print("NOT FOR CLINICAL USE")
     print("=" * 70)
 
@@ -254,47 +178,92 @@ def main() -> None:
     test = df[df["partition"] == "test"].copy()
     print(f"Rows train/val/test: {len(train)} / {len(val)} / {len(test)}")
 
-    models: dict[str, Pipeline] = {}
+    # Fit ONE shared preprocessor (major speed win vs 11 full pipelines)
+    prep = make_preprocessor()
+    X_train_raw = train[ALL_FEATURES]
+    X_val_raw = val[ALL_FEATURES]
+    X_test_raw = test[ALL_FEATURES]
+    X_train = prep.fit_transform(X_train_raw)
+    X_val = prep.transform(X_val_raw)
+    X_test = prep.transform(X_test_raw)
+
+    models: dict[str, LogisticRegression] = {}
     metrics_all: list[dict] = []
 
-    # Per-disease presence at encounter
-    for d in DISEASES:
-        target = f"disease_present_at_encounter_{d}"
+    targets = {d: f"disease_present_at_encounter_{d}" for d in DISEASES}
+    targets["hospitalization_12m"] = "hospitalization_within_12_months"
+
+    for key, target in targets.items():
+        if target not in train.columns:
+            print(f"Skip missing target {target}")
+            continue
         print(f"\nTraining {target} ...")
-        pipe, m = train_binary_model(train, val, target)
-        t = evaluate_test(pipe, test, target)
-        m.update(t)
-        models[d] = pipe
-        metrics_all.append(m)
+        y_tr = train[target].astype(int)
+        y_va = val[target].astype(int)
+        y_te = test[target].astype(int)
+        m_tr = y_tr >= 0
+        m_va = y_va >= 0
+        m_te = y_te >= 0
+        y_tr, y_va, y_te = y_tr[m_tr], y_va[m_va], y_te[m_te]
+        Xt, Xv, Xs = X_train[m_tr.values], X_val[m_va.values], X_test[m_te.values]
+
+        if y_tr.nunique() < 2:
+            print("  skipped: single class")
+            continue
+
+        clf = LogisticRegression(
+            max_iter=400,
+            class_weight="balanced",
+            solver="lbfgs",
+            C=0.5,
+            random_state=42,
+        )
+        clf.fit(Xt, y_tr)
+        models[key] = clf
+
+        p_va = clf.predict_proba(Xv)[:, 1]
+        p_te = clf.predict_proba(Xs)[:, 1]
+        va = eval_binary(y_va.values, p_va)
+        te = eval_binary(y_te.values, p_te)
+        row = {
+            "target": target,
+            "n_train": int(len(y_tr)),
+            "n_val": int(len(y_va)),
+            "n_test": int(len(y_te)),
+            "train_prevalence": float(y_tr.mean()),
+            "val_auroc": va["auroc"],
+            "val_auprc": va["auprc"],
+            "val_brier": va["brier"],
+            "test_auroc": te["auroc"],
+            "test_auprc": te["auprc"],
+            "test_brier": te["brier"],
+        }
+        metrics_all.append(row)
         print(
-            f"  val AUROC={m.get('val_auroc'):.3f} AUPRC={m.get('val_auprc'):.3f} | "
-            f"test AUROC={t.get('test_auroc')} AUPRC={t.get('test_auprc')}"
+            f"  val AUROC={va['auroc']:.3f} | test AUROC={te['auroc']:.3f}"
+            if va["auroc"] is not None
+            else "  metrics unavailable"
         )
 
-    # Hospitalization within 12 months
-    print("\nTraining hospitalization_within_12_months ...")
-    hosp_target = "hospitalization_within_12_months"
-    if hosp_target in train.columns:
-        pipe_h, m_h = train_binary_model(train, val, hosp_target)
-        t_h = evaluate_test(pipe_h, test, hosp_target)
-        m_h.update(t_h)
-        models["hospitalization_12m"] = pipe_h
-        metrics_all.append(m_h)
-        print(
-            f"  val AUROC={m_h.get('val_auroc'):.3f} | test AUROC={t_h.get('test_auroc')}"
-        )
+    defaults: dict = {}
+    for c in NUMERIC_FEATURES:
+        defaults[c] = float(train[c].median()) if c in train and train[c].notna().any() else 0.0
+    for c in CATEGORICAL_FEATURES:
+        mode = train[c].mode() if c in train else pd.Series(["unknown"])
+        defaults[c] = str(mode.iloc[0]) if len(mode) else "unknown"
 
-    # Bundle for Streamlit
     bundle = {
+        "format": "shared_preprocessor_v2",
+        "preprocessor": prep,
         "models": models,
         "diseases": DISEASES,
         "disease_labels": DISEASE_LABELS,
         "numeric_features": NUMERIC_FEATURES,
         "categorical_features": CATEGORICAL_FEATURES,
         "all_features": ALL_FEATURES,
-        "feature_defaults": _feature_defaults(train),
+        "feature_defaults": defaults,
         "generator_version": "1.2.0",
-        "model_version": "1.0.0",
+        "model_version": "2.0.0-fast",
         "trained_on": "data/clean/flat_encounter_level.csv",
         "disclaimer": (
             "SYNTHETIC RESEARCH / DEMO MODEL ONLY. "
@@ -304,37 +273,25 @@ def main() -> None:
     }
 
     out_path = MODEL_DIR / "streamlit_disease_models.joblib"
-    joblib.dump(bundle, out_path)
-    metrics_path = MODEL_DIR / "training_metrics.json"
-    with open(metrics_path, "w", encoding="utf-8") as f:
+    # compress=3 shrinks download/load on Streamlit Cloud
+    joblib.dump(bundle, out_path, compress=3)
+    with open(MODEL_DIR / "training_metrics.json", "w", encoding="utf-8") as f:
         json.dump(
             {
                 "disclaimer": bundle["disclaimer"],
                 "model_version": bundle["model_version"],
+                "format": bundle["format"],
                 "metrics": metrics_all,
             },
             f,
             indent=2,
         )
 
+    size_mb = out_path.stat().st_size / 1e6
     print("\n" + "=" * 70)
-    print(f"Saved: {out_path}")
-    print(f"Metrics: {metrics_path}")
-    print("Run Streamlit:  streamlit run streamlit_app.py")
+    print(f"Saved: {out_path} ({size_mb:.2f} MB compressed)")
+    print("Run: streamlit run streamlit_app.py")
     print("=" * 70)
-
-
-def _feature_defaults(train: pd.DataFrame) -> dict:
-    """Median / mode defaults for Streamlit form prefill."""
-    defaults: dict = {}
-    for c in NUMERIC_FEATURES:
-        if c in train.columns:
-            defaults[c] = float(train[c].median()) if train[c].notna().any() else 0.0
-    for c in CATEGORICAL_FEATURES:
-        if c in train.columns:
-            mode = train[c].mode()
-            defaults[c] = str(mode.iloc[0]) if len(mode) else ""
-    return defaults
 
 
 if __name__ == "__main__":

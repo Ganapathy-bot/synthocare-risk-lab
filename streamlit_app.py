@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Streamlit demo: multi-disease risk screening using models trained on
-SYNTHETIC data only.
+SynthoCare — fast Streamlit demo for synthetic multi-disease risk models.
 
-NOT FOR CLINICAL USE. Research / education / pipeline demonstration.
+NOT FOR CLINICAL USE. Research / education only.
+Optimized for Streamlit Community Cloud cold-start and prediction latency.
 """
 
 from __future__ import annotations
@@ -17,7 +17,6 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parent
 MODEL_PATH = ROOT / "models" / "streamlit_disease_models.joblib"
-HERO_PATH = ROOT / "assets" / "hero_banner.jpg"
 
 st.set_page_config(
     page_title="SynthoCare Risk Lab",
@@ -26,317 +25,59 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-
-# ---------------------------------------------------------------------------
-# Styles
-# ---------------------------------------------------------------------------
+# Compact CSS — no external font CDN (faster first paint on Cloud)
 APP_CSS = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap');
-
-html, body, [class*="css"] {
-  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
-}
-
-/* Hide default streamlit chrome bits slightly */
-#MainMenu {visibility: hidden;}
-footer {visibility: hidden;}
-header {visibility: hidden;}
-
-.block-container {
-  padding-top: 1.2rem;
-  padding-bottom: 3rem;
-  max-width: 1180px;
-}
-
-/* Sidebar */
+html, body, [class*="css"] { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+#MainMenu, footer, header { visibility: hidden; }
+.block-container { padding-top: 1rem; padding-bottom: 2rem; max-width: 1100px; }
 section[data-testid="stSidebar"] {
-  background: linear-gradient(180deg, #0b3d4a 0%, #0f5c6e 45%, #147a8a 100%);
+  background: linear-gradient(180deg, #0b3d4a 0%, #0f5c6e 50%, #147a8a 100%);
 }
-section[data-testid="stSidebar"] * {
-  color: #f3fbfc !important;
+section[data-testid="stSidebar"] * { color: #f3fbfc !important; }
+.hero {
+  background: linear-gradient(115deg, #07242d 0%, #0f5c6e 55%, #1a9aa8 100%);
+  border-radius: 18px; padding: 1.8rem 2rem; color: #fff;
+  box-shadow: 0 14px 36px rgba(11,61,74,.2); margin-bottom: 1rem;
 }
-section[data-testid="stSidebar"] .stRadio label {
-  font-weight: 500;
+.hero h1 { margin: 0 0 .5rem 0; font-size: clamp(1.6rem, 3vw, 2.3rem); line-height: 1.15; }
+.hero p { margin: 0; opacity: .92; max-width: 640px; line-height: 1.5; }
+.kicker {
+  display: inline-block; font-size: .72rem; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.22);
+  padding: .3rem .7rem; border-radius: 999px; margin-bottom: .75rem;
 }
-section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
-  color: #d7f0f3 !important;
+.alert {
+  background: #fff8ea; border: 1px solid #f0d7a8; border-left: 5px solid #d4a017;
+  border-radius: 10px; padding: .8rem 1rem; color: #6a4e12; font-size: .92rem; margin: .6rem 0 1rem 0;
 }
-
-/* Hero */
-.hero-wrap {
-  position: relative;
-  border-radius: 22px;
-  overflow: hidden;
-  margin-bottom: 1.5rem;
-  box-shadow: 0 18px 50px rgba(11, 61, 74, 0.18);
-  border: 1px solid rgba(15, 92, 110, 0.12);
-}
-.hero-bg {
-  width: 100%;
-  height: 320px;
-  object-fit: cover;
-  display: block;
-  filter: saturate(1.05) brightness(0.92);
-}
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg,
-    rgba(7, 36, 45, 0.88) 0%,
-    rgba(11, 61, 74, 0.72) 42%,
-    rgba(20, 122, 138, 0.35) 100%);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 2.4rem 2.8rem;
-}
-.hero-kicker {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  background: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.22);
-  color: #e8fbff;
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  width: fit-content;
-  margin-bottom: 0.9rem;
-}
-.hero-title {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: clamp(1.9rem, 3.2vw, 2.75rem);
-  line-height: 1.12;
-  color: #ffffff;
-  margin: 0 0 0.75rem 0;
-  max-width: 720px;
-  font-weight: 700;
-}
-.hero-sub {
-  color: #d7eef2;
-  font-size: 1.05rem;
-  line-height: 1.55;
-  max-width: 640px;
-  margin: 0 0 1.25rem 0;
-}
-.hero-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  align-items: center;
-}
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-.pill-light {
-  background: rgba(255,255,255,0.14);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.22);
-}
-.pill-warn {
-  background: rgba(255, 196, 92, 0.18);
-  color: #ffe7b0;
-  border: 1px solid rgba(255, 210, 120, 0.35);
-}
-
-/* Cards */
-.card-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin: 0.5rem 0 1.5rem 0;
-}
-@media (max-width: 900px) {
-  .card-grid { grid-template-columns: 1fr; }
-  .hero-bg { height: 420px; }
-  .hero-overlay { padding: 1.5rem; }
-}
+.card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; margin: .8rem 0 1.2rem; }
+@media (max-width: 900px) { .card-grid { grid-template-columns: 1fr; } }
 .card {
-  background: #ffffff;
-  border: 1px solid #e4eef0;
-  border-radius: 16px;
-  padding: 1.2rem 1.25rem;
-  box-shadow: 0 8px 24px rgba(11, 61, 74, 0.05);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  background: #fff; border: 1px solid #e4eef0; border-radius: 14px; padding: 1rem 1.1rem;
+  box-shadow: 0 6px 18px rgba(11,61,74,.05);
 }
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 32px rgba(11, 61, 74, 0.10);
-}
-.card-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.25rem;
-  margin-bottom: 0.75rem;
-  background: linear-gradient(135deg, #e7f7f9, #d4eef3);
-}
-.card h3 {
-  font-size: 1.05rem;
-  margin: 0 0 0.4rem 0;
-  color: #0b3d4a;
-  font-weight: 700;
-}
-.card p {
-  margin: 0;
-  color: #4d646b;
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
-
-.section-title {
-  font-family: 'Fraunces', Georgia, serif;
-  color: #0b3d4a;
-  font-size: 1.55rem;
-  margin: 1.4rem 0 0.35rem 0;
-}
-.section-lead {
-  color: #5a7077;
-  margin: 0 0 1rem 0;
-  font-size: 0.98rem;
-}
-
-/* Disease chips */
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.75rem 0 1.5rem 0;
-}
+.card h3 { margin: 0 0 .35rem 0; color: #0b3d4a; font-size: 1rem; }
+.card p { margin: 0; color: #4d646b; font-size: .9rem; line-height: 1.45; }
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .65rem; margin: .8rem 0 1.1rem; }
+@media (max-width: 900px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+.stat { background: #0f5c6e; color: #fff; border-radius: 12px; padding: .85rem 1rem; }
+.stat .n { font-size: 1.4rem; font-weight: 700; }
+.stat .l { font-size: .78rem; opacity: .9; }
+.chip-row { display: flex; flex-wrap: wrap; gap: .4rem; margin: .5rem 0 1rem; }
 .chip {
-  background: #f2fafb;
-  border: 1px solid #cfe6ea;
-  color: #0f5c6e;
-  padding: 0.4rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.84rem;
-  font-weight: 600;
+  background: #f2fafb; border: 1px solid #cfe6ea; color: #0f5c6e;
+  padding: .35rem .65rem; border-radius: 999px; font-size: .82rem; font-weight: 600;
 }
-
-/* Steps */
-.steps {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.85rem;
-  margin-bottom: 1.5rem;
-}
-@media (max-width: 900px) {
-  .steps { grid-template-columns: 1fr 1fr; }
-}
-.step {
-  background: linear-gradient(180deg, #ffffff, #f7fcfd);
-  border: 1px solid #e0eef1;
-  border-radius: 14px;
-  padding: 1rem;
-}
-.step-num {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: #0f5c6e;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  margin-bottom: 0.55rem;
-}
-.step h4 {
-  margin: 0 0 0.3rem 0;
-  color: #0b3d4a;
-  font-size: 0.95rem;
-}
-.step p {
-  margin: 0;
-  color: #5a7077;
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
-
-/* Banner alert */
-.alert-banner {
-  background: linear-gradient(90deg, #fff6e8, #fffaf2);
-  border: 1px solid #f0d7a8;
-  border-left: 5px solid #d4a017;
-  border-radius: 12px;
-  padding: 0.9rem 1.1rem;
-  color: #6a4e12;
-  font-size: 0.92rem;
-  line-height: 1.5;
-  margin: 0.5rem 0 1.2rem 0;
-}
-.alert-banner strong { color: #5a3f08; }
-
-.stat-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-  margin: 1rem 0 1.5rem 0;
-}
-@media (max-width: 900px) {
-  .stat-row { grid-template-columns: 1fr 1fr; }
-}
-.stat {
-  background: #0f5c6e;
-  color: white;
-  border-radius: 14px;
-  padding: 1rem 1.1rem;
-}
-.stat .n {
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 1.55rem;
-  font-weight: 700;
-  line-height: 1.1;
-}
-.stat .l {
-  font-size: 0.8rem;
-  opacity: 0.88;
-  margin-top: 0.2rem;
-}
-
-.footer-note {
-  margin-top: 2rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e4eef0;
-  color: #7a9096;
-  font-size: 0.82rem;
-  line-height: 1.5;
-}
-
-/* Predict page */
-.page-head {
-  margin-bottom: 1rem;
-}
-.page-head h1 {
-  font-family: 'Fraunces', Georgia, serif;
-  color: #0b3d4a;
-  font-size: 1.8rem;
-  margin: 0 0 0.3rem 0;
-}
-.page-head p {
-  color: #5a7077;
-  margin: 0;
-}
+.page-head h1 { color: #0b3d4a; font-size: 1.65rem; margin: 0 0 .25rem 0; }
+.page-head p { color: #5a7077; margin: 0 0 .75rem 0; }
 </style>
 """
 
 
-@st.cache_resource
+@st.cache_resource(show_spinner="Loading models (first visit only)…")
 def load_bundle():
+    """Load once per server process — critical for Cloud speed after cold start."""
     if not MODEL_PATH.exists():
         return None
     return joblib.load(MODEL_PATH)
@@ -353,17 +94,40 @@ def risk_band(p: float) -> str:
 
 
 def build_input_row(bundle: dict, values: dict) -> pd.DataFrame:
-    row = {}
-    for f in bundle["all_features"]:
-        row[f] = values.get(f, bundle["feature_defaults"].get(f, np.nan))
+    row = {f: values.get(f, bundle["feature_defaults"].get(f, np.nan)) for f in bundle["all_features"]}
     return pd.DataFrame([row])
 
 
-def inject_css() -> None:
+def predict_all(bundle: dict, X: pd.DataFrame) -> list[dict]:
+    """Transform features once, then score all disease heads (fast path)."""
+    models = bundle["models"]
+    diseases = bundle["diseases"]
+    labels = bundle["disease_labels"]
+
+    # New format: shared preprocessor + linear heads
+    if bundle.get("format") == "shared_preprocessor_v2" and "preprocessor" in bundle:
+        Xt = bundle["preprocessor"].transform(X)
+        rows = []
+        for d in diseases:
+            if d not in models:
+                continue
+            proba = float(models[d].predict_proba(Xt)[0, 1])
+            rows.append({"Condition": labels[d], "Probability": proba, "Risk band": risk_band(proba)})
+        return rows
+
+    # Legacy: full sklearn Pipeline per disease
+    rows = []
+    for d in diseases:
+        if d not in models:
+            continue
+        proba = float(models[d].predict_proba(X)[0, 1])
+        rows.append({"Condition": labels[d], "Probability": proba, "Risk band": risk_band(proba)})
+    return rows
+
+
+def main() -> None:
     st.markdown(APP_CSS, unsafe_allow_html=True)
 
-
-def sidebar_nav() -> str:
     with st.sidebar:
         st.markdown("### 🧬 SynthoCare")
         st.caption("Synthetic risk lab · research demo")
@@ -373,209 +137,90 @@ def sidebar_nav() -> str:
             label_visibility="collapsed",
         )
         st.markdown("---")
-        st.markdown(
-            """
-**Status**  
-✅ Dataset ready  
-✅ Models loaded  
-⚠️ Not clinical
-"""
-        )
-        st.markdown("---")
-        st.caption("v1.0 demo · seed 42 · synthetic only")
-    return page
+        st.caption("Fast demo · synthetic only · not clinical")
 
+    # Lazy-load models only when needed (Home/About stay light)
+    needs_model = page in ("Risk prediction", "Model metrics")
+    bundle = None
+    if needs_model:
+        bundle = load_bundle()
+        if bundle is None:
+            st.error(
+                "Model file missing. On Cloud, ensure `models/streamlit_disease_models.joblib` "
+                "is in the GitHub repo. Locally run `python train_models.py`."
+            )
+            return
 
-def render_home(bundle) -> None:
-    # Hero
-    if HERO_PATH.exists():
-        import base64
-
-        b64 = base64.b64encode(HERO_PATH.read_bytes()).decode()
-        hero_img = f"data:image/jpeg;base64,{b64}"
+    if page == "Home":
+        render_home()
+    elif page == "Risk prediction":
+        render_predict(bundle)
+    elif page == "Model metrics":
+        render_metrics(bundle)
     else:
-        hero_img = (
-            "data:image/svg+xml," 
-            + "%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='400'%3E"
-            + "%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E"
-            + "%3Cstop stop-color='%230b3d4a'/%3E%3Cstop offset='1' stop-color='%23147a8a'/%3E"
-            + "%3C/linearGradient%3E%3C/defs%3E"
-            + "%3Crect width='1600' height='400' fill='url(%23g)'/%3E%3C/svg%3E"
-        )
+        render_about(bundle if bundle else load_bundle())
 
-    st.markdown(
-        f"""
-<div class="hero-wrap">
-  <img class="hero-bg" src="{hero_img}" alt="Research banner" />
-  <div class="hero-overlay">
-    <div class="hero-kicker">🧪 Synthetic · Research · Education</div>
-    <h1 class="hero-title">Chronic disease risk models<br/>built on synthetic patients</h1>
-    <p class="hero-sub">
-      Explore multi-condition screening models trained on a latent-state synthetic cohort.
-      Design pipelines, compare signals, and prototype interfaces — without real patient data.
-    </p>
-    <div class="hero-cta-row">
-      <span class="pill pill-light">10 disease heads</span>
-      <span class="pill pill-light">Patient-level train / val / test</span>
-      <span class="pill pill-warn">Not for clinical use</span>
-    </div>
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
-    )
 
+def render_home() -> None:
+    # CSS-only hero (no large base64 image) — much faster first paint
     st.markdown(
         """
-<div class="alert-banner">
-  <strong>Important:</strong> Every prediction here is produced by models trained only on
-  <em>computer-generated</em> records. Outputs are for methodology demos and teaching —
-  they must not be used to diagnose, screen, or manage real patients.
+<div class="hero">
+  <div class="kicker">Synthetic · Research · Education</div>
+  <h1>Chronic disease risk models<br/>built on synthetic patients</h1>
+  <p>Multi-condition screening demo trained on computer-generated longitudinal data.
+  Fast cloud-ready models for pipeline teaching — not for real patient care.</p>
 </div>
-""",
-        unsafe_allow_html=True,
-    )
-
-    # Stats
-    n_models = len(bundle["models"]) if bundle else 0
-    n_diseases = len(bundle["diseases"]) if bundle else 10
-    st.markdown(
-        f"""
+<div class="alert"><strong>Important:</strong> Outputs are synthetic-model scores only.
+They must not be used to diagnose, screen, or manage real patients.</div>
 <div class="stat-row">
   <div class="stat"><div class="n">3,000</div><div class="l">Synthetic patients</div></div>
-  <div class="stat"><div class="n">{n_diseases}</div><div class="l">Chronic conditions</div></div>
-  <div class="stat"><div class="n">{n_models}</div><div class="l">Trained model heads</div></div>
-  <div class="stat"><div class="n">70/15/15</div><div class="l">Train / val / test split</div></div>
+  <div class="stat"><div class="n">10</div><div class="l">Chronic conditions</div></div>
+  <div class="stat"><div class="n">11</div><div class="l">Model heads</div></div>
+  <div class="stat"><div class="n">70/15/15</div><div class="l">Train / val / test</div></div>
 </div>
-""",
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<h2 class="section-title">What you can do</h2>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="section-lead">A full demo stack from synthetic cohort → trained models → interactive UI.</p>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
 <div class="card-grid">
-  <div class="card">
-    <div class="card-icon">🎯</div>
-    <h3>Multi-disease screening demo</h3>
-    <p>Estimate synthetic risk scores for diabetes, CKD, CAD, HF, hypertension, COPD, liver disease, RA, thyroid, and cognitive decline.</p>
-  </div>
-  <div class="card">
-    <div class="card-icon">🧪</div>
-    <h3>Missing-lab aware inputs</h3>
-    <p>Optional biomarkers with realistic missingness handling — leave labs blank when unknown, just like sparse EHR panels.</p>
-  </div>
-  <div class="card">
-    <div class="card-icon">📊</div>
-    <h3>Transparent hold-out metrics</h3>
-    <p>Inspect AUROC / AUPRC on synthetic validation and test partitions. Strong scores here are not clinical proof.</p>
-  </div>
+  <div class="card"><h3>🎯 Multi-disease demo</h3>
+  <p>Score diabetes, CKD, CAD, HF, hypertension, COPD, liver disease, RA, thyroid, cognition.</p></div>
+  <div class="card"><h3>⚡ Cloud-optimized</h3>
+  <p>Shared preprocessor + light linear models for quick cold starts and instant predictions.</p></div>
+  <div class="card"><h3>📊 Transparent metrics</h3>
+  <p>Hold-out AUROC/AUPRC on synthetic partitions — not clinical proof.</p></div>
 </div>
 """,
         unsafe_allow_html=True,
     )
-
-    st.markdown('<h2 class="section-title">Conditions in scope</h2>', unsafe_allow_html=True)
-    labels = (
-        bundle["disease_labels"]
-        if bundle
-        else {
-            "t2dm": "Type 2 diabetes",
-            "ckd": "Chronic kidney disease",
-            "cad": "Coronary artery disease",
-            "hf": "Heart failure",
-            "htn": "Hypertension",
-            "copd": "COPD",
-            "cld_masld": "CLD / MASLD",
-            "ra": "Rheumatoid arthritis",
-            "hypothyroid": "Hypothyroidism",
-            "alzheimers": "Cognitive decline",
-        }
-    )
-    chips = "".join(f'<span class="chip">{lab}</span>' for lab in labels.values())
-    st.markdown(f'<div class="chip-row">{chips}</div>', unsafe_allow_html=True)
-
-    st.markdown('<h2 class="section-title">How the pipeline works</h2>', unsafe_allow_html=True)
+    st.markdown("#### Conditions in scope")
+    chips = [
+        "Type 2 diabetes",
+        "CKD",
+        "CAD",
+        "Heart failure",
+        "Hypertension",
+        "COPD",
+        "CLD / MASLD",
+        "RA",
+        "Hypothyroidism",
+        "Cognitive decline",
+    ]
     st.markdown(
-        """
-<div class="steps">
-  <div class="step">
-    <div class="step-num">1</div>
-    <h4>Generate</h4>
-    <p>Latent-state simulator creates longitudinal synthetic patients, labs, and labels.</p>
-  </div>
-  <div class="step">
-    <div class="step-num">2</div>
-    <h4>Split</h4>
-    <p>Patient-level 70/15/15 partitions prevent the same person leaking across sets.</p>
-  </div>
-  <div class="step">
-    <div class="step-num">3</div>
-    <h4>Train</h4>
-    <p>Gradient-boosted classifiers learn disease-presence heads from encounter features.</p>
-  </div>
-  <div class="step">
-    <div class="step-num">4</div>
-    <h4>Interact</h4>
-    <p>Use this app to explore scores for scenario inputs — research demo only.</p>
-  </div>
-</div>
-""",
+        '<div class="chip-row">' + "".join(f'<span class="chip">{c}</span>' for c in chips) + "</div>",
         unsafe_allow_html=True,
     )
-
-    st.markdown('<h2 class="section-title">Start exploring</h2>', unsafe_allow_html=True)
-    st.markdown(
-        '<p class="section-lead">Open <strong>Risk prediction</strong> in the sidebar to enter a scenario and run the models.</p>',
-        unsafe_allow_html=True,
-    )
-
-    c1, c2, c3 = st.columns([1, 1, 1])
-    with c1:
-        st.info("**Risk prediction**\n\nEnter vitals, symptoms & labs")
-    with c2:
-        st.info("**Model metrics**\n\nReview synthetic hold-out scores")
-    with c3:
-        st.info("**About & limits**\n\nIntended / prohibited uses")
-
-    st.markdown(
-        """
-<div class="footer-note">
-  SynthoCare Risk Lab · SyntheticChronicDiseaseGenerator · Models are not medical devices.
-  External clinical validation is required before any real-world interpretation.
-</div>
-""",
-        unsafe_allow_html=True,
-    )
+    st.info("Open **Risk prediction** in the sidebar to run a scenario.")
 
 
-def render_predict(bundle) -> None:
+def render_predict(bundle: dict) -> None:
     st.markdown(
         """
 <div class="page-head">
   <h1>Risk prediction</h1>
-  <p>Scenario-style inputs for a single encounter. Optional labs may be left blank.</p>
+  <p>Enter a synthetic encounter scenario. Leave labs blank if unknown.</p>
 </div>
+<div class="alert"><strong>Demo only:</strong> Probabilities are not clinical diagnoses.</div>
 """,
         unsafe_allow_html=True,
     )
-    st.markdown(
-        """
-<div class="alert-banner">
-  <strong>Demo only:</strong> Probabilities reflect synthetic training labels, not clinical diagnoses.
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-
-    if bundle is None:
-        st.error("Model bundle not found. Run `python train_models.py` first.")
-        return
-
     defaults = bundle["feature_defaults"]
 
     with st.expander("👤 Demographics & body measures", expanded=True):
@@ -600,7 +245,7 @@ def render_predict(bundle) -> None:
             )
         with c3:
             ethnicity = st.selectbox(
-                "Ethnicity (audit / optional)",
+                "Ethnicity (optional)",
                 [
                     "White",
                     "Black_or_African_American",
@@ -640,20 +285,21 @@ def render_predict(bundle) -> None:
     with st.expander("🩺 Symptoms", expanded=False):
         sc = st.columns(4)
         symptoms = {}
-        symptom_labels = [
-            ("symptom_polyuria", "Polyuria"),
-            ("symptom_polydipsia", "Polydipsia"),
-            ("symptom_fatigue", "Fatigue"),
-            ("symptom_chest_pain", "Chest pain"),
-            ("symptom_dyspnea", "Dyspnea"),
-            ("symptom_edema", "Edema"),
-            ("symptom_cough", "Cough"),
-            ("symptom_joint_pain", "Joint pain"),
-            ("symptom_joint_swelling", "Joint swelling"),
-            ("symptom_cognitive_complaint", "Cognitive complaint"),
-            ("symptom_cold_intolerance", "Cold intolerance"),
-        ]
-        for i, (key, label) in enumerate(symptom_labels):
+        for i, (key, label) in enumerate(
+            [
+                ("symptom_polyuria", "Polyuria"),
+                ("symptom_polydipsia", "Polydipsia"),
+                ("symptom_fatigue", "Fatigue"),
+                ("symptom_chest_pain", "Chest pain"),
+                ("symptom_dyspnea", "Dyspnea"),
+                ("symptom_edema", "Edema"),
+                ("symptom_cough", "Cough"),
+                ("symptom_joint_pain", "Joint pain"),
+                ("symptom_joint_swelling", "Joint swelling"),
+                ("symptom_cognitive_complaint", "Cognitive complaint"),
+                ("symptom_cold_intolerance", "Cold intolerance"),
+            ]
+        ):
             with sc[i % 4]:
                 symptoms[key] = int(st.checkbox(label, value=False, key=key))
 
@@ -684,25 +330,25 @@ def render_predict(bundle) -> None:
                     st.checkbox(bundle["disease_labels"][d], value=False, key=f"fh_{d}")
                 )
 
-    with st.expander("🔬 Laboratory values (optional)", expanded=False):
-        st.caption("Uncheck to leave missing — models were trained with incomplete panels.")
+    with st.expander("🔬 Labs (optional)", expanded=False):
+        st.caption("Leave unchecked to treat as missing.")
         lab_defs = [
             ("lab_hba1c", "HbA1c (%)", 4.0, 15.0),
-            ("lab_fasting_plasma_glucose", "Fasting glucose (mg/dL)", 50.0, 400.0),
+            ("lab_fasting_plasma_glucose", "Fasting glucose", 50.0, 400.0),
             ("lab_egfr", "eGFR", 5.0, 140.0),
-            ("lab_uacr", "UACR (mg/g)", 0.0, 3500.0),
-            ("lab_ldl_c", "LDL-C (mg/dL)", 30.0, 300.0),
-            ("lab_hdl_c", "HDL-C (mg/dL)", 15.0, 120.0),
-            ("lab_triglycerides", "Triglycerides (mg/dL)", 30.0, 800.0),
-            ("lab_alt", "ALT (U/L)", 5.0, 400.0),
-            ("lab_ast", "AST (U/L)", 5.0, 400.0),
-            ("lab_tsh", "TSH (mIU/L)", 0.01, 80.0),
-            ("lab_nt_probnp", "NT-proBNP (pg/mL)", 5.0, 30000.0),
-            ("lab_hemoglobin", "Hemoglobin (g/dL)", 6.0, 20.0),
-            ("lab_crp", "CRP (mg/L)", 0.1, 100.0),
-            ("lab_anti_ccp", "Anti-CCP (U/mL)", 0.0, 400.0),
+            ("lab_uacr", "UACR", 0.0, 3500.0),
+            ("lab_ldl_c", "LDL-C", 30.0, 300.0),
+            ("lab_hdl_c", "HDL-C", 15.0, 120.0),
+            ("lab_triglycerides", "Triglycerides", 30.0, 800.0),
+            ("lab_alt", "ALT", 5.0, 400.0),
+            ("lab_ast", "AST", 5.0, 400.0),
+            ("lab_tsh", "TSH", 0.01, 80.0),
+            ("lab_nt_probnp", "NT-proBNP", 5.0, 30000.0),
+            ("lab_hemoglobin", "Hemoglobin", 6.0, 20.0),
+            ("lab_crp", "CRP", 0.1, 100.0),
+            ("lab_anti_ccp", "Anti-CCP", 0.0, 400.0),
             ("lab_fev1_fvc_ratio", "FEV1/FVC", 0.2, 1.0),
-            ("lab_moca", "MoCA score", 0.0, 30.0),
+            ("lab_moca", "MoCA", 0.0, 30.0),
         ]
         labs = {}
         lc = st.columns(4)
@@ -710,15 +356,12 @@ def render_predict(bundle) -> None:
             with lc[i % 4]:
                 use = st.checkbox(f"Provide {label}", value=False, key=f"use_{key}")
                 if use:
-                    default = float(defaults.get(key, (lo + hi) / 2))
-                    default = float(np.clip(default, lo, hi))
+                    default = float(np.clip(defaults.get(key, (lo + hi) / 2), lo, hi))
                     labs[key] = st.number_input(label, lo, hi, default, key=f"val_{key}")
                 else:
                     labs[key] = np.nan
 
-    run = st.button("Run risk estimates", type="primary", use_container_width=True)
-
-    if not run:
+    if not st.button("Run risk estimates", type="primary", use_container_width=True):
         return
 
     values = {
@@ -747,20 +390,8 @@ def render_predict(bundle) -> None:
     }
     X = build_input_row(bundle, values)
 
-    st.markdown("### Estimated probabilities")
-    st.caption("Synthetic model outputs only — not a clinical diagnosis.")
-
-    rows = []
-    models = bundle["models"]
-    for d in bundle["diseases"]:
-        proba = float(models[d].predict_proba(X)[0, 1])
-        rows.append(
-            {
-                "Condition": bundle["disease_labels"][d],
-                "Probability": proba,
-                "Risk band": risk_band(proba),
-            }
-        )
+    with st.spinner("Scoring…"):
+        rows = predict_all(bundle, X)
 
     result = pd.DataFrame(rows).sort_values("Probability", ascending=False)
     display = result.copy()
@@ -774,74 +405,56 @@ def render_predict(bundle) -> None:
             hide_index=True,
         )
     with right:
-        chart_df = result.set_index("Condition")["Probability"]
-        st.bar_chart(chart_df, color="#0f5c6e")
+        st.bar_chart(result.set_index("Condition")["Probability"], color="#0f5c6e")
 
+    models = bundle["models"]
     if "hospitalization_12m" in models:
-        ph = float(models["hospitalization_12m"].predict_proba(X)[0, 1])
+        if bundle.get("format") == "shared_preprocessor_v2":
+            Xt = bundle["preprocessor"].transform(X)
+            ph = float(models["hospitalization_12m"].predict_proba(Xt)[0, 1])
+        else:
+            ph = float(models["hospitalization_12m"].predict_proba(X)[0, 1])
         st.metric("Synthetic 12-month hospitalization proxy", f"{ph:.1%}")
 
     top = result.iloc[0]
     st.success(
         f"Highest score: **{top['Condition']}** at **{top['Probability']:.1%}** "
-        f"({top['Risk band']} band) — demo interpretation only."
+        f"({top['Risk band']}) — demo only."
     )
 
-    with st.expander("Input vector (debug)"):
-        st.dataframe(X.T.rename(columns={0: "value"}), use_container_width=True)
 
-
-def render_metrics(bundle) -> None:
+def render_metrics(bundle: dict) -> None:
     st.markdown(
         """
 <div class="page-head">
   <h1>Model metrics</h1>
-  <p>Hold-out performance on the synthetic validation and test partitions.</p>
+  <p>Synthetic hold-out performance (not clinical validation).</p>
 </div>
 """,
         unsafe_allow_html=True,
     )
-    st.markdown(
-        """
-<div class="alert-banner">
-  <strong>Read carefully:</strong> High AUROC on synthetic data does not establish clinical usefulness,
-  calibration in real care, or fairness in real populations.
-</div>
-""",
-        unsafe_allow_html=True,
-    )
-    if bundle is None:
-        st.error("Model bundle not found.")
-        return
-
     metrics = bundle.get("metrics", [])
     if not metrics:
         st.write("No metrics stored.")
         return
-
     mdf = pd.DataFrame(metrics)
-    show_cols = [
+    show = [
         c
         for c in [
             "target",
             "n_train",
             "n_val",
             "n_test",
-            "train_prevalence",
             "val_auroc",
             "val_auprc",
             "test_auroc",
             "test_auprc",
-            "test_brier",
         ]
         if c in mdf.columns
     ]
-    st.dataframe(mdf[show_cols], use_container_width=True, hide_index=True)
-
+    st.dataframe(mdf[show], use_container_width=True, hide_index=True)
     if "test_auroc" in mdf.columns:
-        plot_df = mdf.dropna(subset=["test_auroc"]).set_index("target")["test_auroc"]
-        st.markdown("#### Test AUROC by target")
-        st.bar_chart(plot_df, color="#147a8a")
+        st.bar_chart(mdf.dropna(subset=["test_auroc"]).set_index("target")["test_auroc"], color="#147a8a")
 
 
 def render_about(bundle) -> None:
@@ -849,82 +462,30 @@ def render_about(bundle) -> None:
         """
 <div class="page-head">
   <h1>About & limits</h1>
-  <p>Intended use, prohibited use, and methodological notes.</p>
+  <p>Intended use and non-clinical disclaimer.</p>
 </div>
 """,
         unsafe_allow_html=True,
     )
-
     c1, c2 = st.columns(2)
     with c1:
-        st.markdown("### ✅ Intended uses")
-        st.markdown(
-            """
-- Research and education demos  
-- ML pipeline development  
-- UI / workflow prototyping  
-- Teaching leakage, missingness, multimorbidity  
-"""
-        )
+        st.markdown("### ✅ Intended uses\n- Research & education\n- Pipeline demos\n- UI prototyping")
     with c2:
-        st.markdown("### 🚫 Prohibited uses")
-        st.markdown(
-            """
-- Real patient diagnosis or triage  
-- Clinical decision support in care  
-- Claiming population epidemiology  
-- Regulatory performance claims  
-"""
-        )
-
-    st.markdown("### Method (short)")
+        st.markdown("### 🚫 Prohibited\n- Real diagnosis\n- Clinical decisions\n- Regulatory claims")
     st.markdown(
         """
-1. Synthetic longitudinal cohort (`generate_dataset.py`)  
-2. Patient-level train / val / test split  
-3. One `HistGradientBoostingClassifier` per disease for `disease_present_at_encounter_*`  
-4. Features: demographics, lifestyle, vitals, symptoms, family history, optional labs  
-5. No latent severity / future outcomes used as features  
+### Performance tips
+- First open after idle can take longer (Streamlit Cloud **cold start**).
+- Home page no longer loads the model bundle.
+- Predictions use one shared transform + light linear heads.
 """
     )
-
-    st.markdown("### External validation required")
-    st.write(
-        "Any real-world use requires validation on representative clinical data, "
-        "calibration assessment, fairness review, and appropriate governance."
-    )
-
     if bundle:
         st.code(bundle.get("disclaimer", ""), language=None)
         st.caption(
-            f"Model v{bundle.get('model_version')} · generator {bundle.get('generator_version')} · "
-            f"{bundle.get('trained_on')}"
+            f"Model v{bundle.get('model_version')} · format {bundle.get('format')} · "
+            f"generator {bundle.get('generator_version')}"
         )
-
-
-def main() -> None:
-    inject_css()
-    page = sidebar_nav()
-    bundle = load_bundle()
-
-    if bundle is None and page != "Home":
-        st.warning(
-            f"Model file not found at `{MODEL_PATH}`.\n\n"
-            "Run:\n"
-            "```\n"
-            "python generate_dataset.py --n-patients 3000 --seed 42\n"
-            "python train_models.py\n"
-            "```"
-        )
-
-    if page == "Home":
-        render_home(bundle)
-    elif page == "Risk prediction":
-        render_predict(bundle)
-    elif page == "Model metrics":
-        render_metrics(bundle)
-    else:
-        render_about(bundle)
 
 
 if __name__ == "__main__":
