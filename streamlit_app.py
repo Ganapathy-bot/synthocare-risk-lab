@@ -187,7 +187,7 @@ def main() -> None:
             label_visibility="collapsed",
         )
         st.markdown("---")
-        st.caption("numpy inference · no sklearn runtime · not clinical")
+        st.caption("numpy inference · free Cloud may throttle CPU · not clinical")
 
     # Home never loads the model file
     if page == "Home":
@@ -247,6 +247,10 @@ do not use for diagnosis or clinical decisions.</div>
         unsafe_allow_html=True,
     )
     st.info("Open **Risk prediction** in the sidebar to run a scenario.")
+    st.caption(
+        "If Streamlit shows “app has been throttled”, free Community Cloud has temporarily "
+        "reduced CPU. Wait until the expiry time, use the app lightly, or run locally."
+    )
 
 
 def render_predict(model: dict) -> None:
@@ -254,7 +258,7 @@ def render_predict(model: dict) -> None:
         """
 <div class="page-head">
   <h1>Risk prediction</h1>
-  <p>Synthetic encounter scenario. Labs optional.</p>
+  <p>Synthetic encounter scenario. Use the form — scoring runs only when you submit (saves Cloud CPU).</p>
 </div>
 <div class="alert"><strong>Demo only:</strong> Not a clinical diagnosis.</div>
 """,
@@ -262,7 +266,9 @@ def render_predict(model: dict) -> None:
     )
     defaults = model["feature_defaults"]
 
-    with st.expander("👤 Demographics & body measures", expanded=True):
+    # st.form batches widgets so each click does NOT re-run the whole app (reduces throttling)
+    with st.form("risk_form", clear_on_submit=False):
+        st.markdown("##### Demographics & body")
         c1, c2, c3 = st.columns(3)
         with c1:
             age = st.number_input("Age (years)", 18, 95, int(defaults.get("age_at_encounter", 55)))
@@ -296,32 +302,25 @@ def render_predict(model: dict) -> None:
             ses = st.selectbox("SES group", ["low", "medium", "high"], index=1)
             access = st.selectbox("Access to care", ["limited", "standard", "enhanced"], index=1)
 
-    with st.expander("🚬 Lifestyle", expanded=True):
+        st.markdown("##### Lifestyle & vitals")
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             smoking = st.selectbox("Smoking", ["never", "former", "current"])
-        with c2:
             pack_years = st.number_input(
                 "Pack-years", 0.0, 100.0, float(defaults.get("pack_years", 0.0)), 0.5
             )
-        with c3:
-            alcohol = st.selectbox("Alcohol use", ["none", "moderate", "heavy"])
-        with c4:
-            activity = st.selectbox("Physical activity", ["sedentary", "moderate", "active"])
-        diet = st.selectbox("Diet risk", ["low", "moderate", "high"], index=1)
-
-    with st.expander("❤️ Vitals", expanded=True):
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            sbp = st.number_input("Systolic BP", 80, 230, int(defaults.get("sbp_mmHg", 128)))
         with c2:
-            dbp = st.number_input("Diastolic BP", 40, 140, int(defaults.get("dbp_mmHg", 78)))
+            alcohol = st.selectbox("Alcohol use", ["none", "moderate", "heavy"])
+            activity = st.selectbox("Physical activity", ["sedentary", "moderate", "active"])
         with c3:
-            hr = st.number_input("Heart rate", 40, 180, int(defaults.get("heart_rate_bpm", 72)))
+            diet = st.selectbox("Diet risk", ["low", "moderate", "high"], index=1)
+            sbp = st.number_input("Systolic BP", 80, 230, int(defaults.get("sbp_mmHg", 128)))
         with c4:
+            dbp = st.number_input("Diastolic BP", 40, 140, int(defaults.get("dbp_mmHg", 78)))
+            hr = st.number_input("Heart rate", 40, 180, int(defaults.get("heart_rate_bpm", 72)))
             spo2 = st.number_input("SpO₂ %", 70, 100, int(defaults.get("spo2_percent", 98)))
 
-    with st.expander("🩺 Symptoms", expanded=False):
+        st.markdown("##### Symptoms (optional)")
         sc = st.columns(4)
         symptoms = {}
         for i, (key, label) in enumerate(
@@ -342,16 +341,16 @@ def render_predict(model: dict) -> None:
             with sc[i % 4]:
                 symptoms[key] = int(st.checkbox(label, value=False, key=key))
 
-    with st.expander("⚡ Acute context", expanded=False):
+        st.markdown("##### Acute context / family history")
         ac = st.columns(5)
         acute = {}
         for i, (key, label) in enumerate(
             [
-                ("acute_infection", "Acute infection"),
+                ("acute_infection", "Infection"),
                 ("dehydration", "Dehydration"),
-                ("strenuous_exercise", "Strenuous exercise"),
-                ("recent_surgery", "Recent surgery"),
-                ("recent_hospitalization", "Recent hospitalization"),
+                ("strenuous_exercise", "Exercise"),
+                ("recent_surgery", "Surgery"),
+                ("recent_hospitalization", "Hospitalization"),
             ]
         ):
             with ac[i]:
@@ -360,7 +359,6 @@ def render_predict(model: dict) -> None:
             acute["acute_infection"] or acute["dehydration"] or acute["recent_surgery"]
         )
 
-    with st.expander("👪 Family history", expanded=False):
         fh = {}
         fhc = st.columns(5)
         for i, d in enumerate(model["diseases"]):
@@ -369,38 +367,38 @@ def render_predict(model: dict) -> None:
                     st.checkbox(model["disease_labels"][d], value=False, key=f"fh_{d}")
                 )
 
-    with st.expander("🔬 Labs (optional)", expanded=False):
-        st.caption("Leave unchecked = missing.")
-        lab_defs = [
-            ("lab_hba1c", "HbA1c (%)", 4.0, 15.0),
-            ("lab_fasting_plasma_glucose", "Fasting glucose", 50.0, 400.0),
-            ("lab_egfr", "eGFR", 5.0, 140.0),
-            ("lab_uacr", "UACR", 0.0, 3500.0),
-            ("lab_ldl_c", "LDL-C", 30.0, 300.0),
-            ("lab_hdl_c", "HDL-C", 15.0, 120.0),
-            ("lab_triglycerides", "Triglycerides", 30.0, 800.0),
-            ("lab_alt", "ALT", 5.0, 400.0),
-            ("lab_ast", "AST", 5.0, 400.0),
-            ("lab_tsh", "TSH", 0.01, 80.0),
-            ("lab_nt_probnp", "NT-proBNP", 5.0, 30000.0),
-            ("lab_hemoglobin", "Hemoglobin", 6.0, 20.0),
-            ("lab_crp", "CRP", 0.1, 100.0),
-            ("lab_anti_ccp", "Anti-CCP", 0.0, 400.0),
-            ("lab_fev1_fvc_ratio", "FEV1/FVC", 0.2, 1.0),
-            ("lab_moca", "MoCA", 0.0, 30.0),
+        st.markdown("##### Key labs (leave 0 = treat as missing for sparse labs)")
+        st.caption(
+            "Tip: set a lab to **0** to leave it missing (except values that can legitimately be 0)."
+        )
+        # Always-visible optional labs (avoids nested widget thrash / high CPU)
+        lab_keys = [
+            ("lab_hba1c", "HbA1c %", 0.0, 15.0),
+            ("lab_fasting_plasma_glucose", "FPG mg/dL", 0.0, 400.0),
+            ("lab_egfr", "eGFR", 0.0, 140.0),
+            ("lab_tsh", "TSH", 0.0, 80.0),
+            ("lab_ldl_c", "LDL-C", 0.0, 300.0),
+            ("lab_alt", "ALT", 0.0, 400.0),
+            ("lab_nt_probnp", "NT-proBNP", 0.0, 30000.0),
+            ("lab_fev1_fvc_ratio", "FEV1/FVC", 0.0, 1.0),
         ]
         labs = {}
+        # remaining labs always missing to keep form light
+        for k in model["numeric_features"]:
+            if k.startswith("lab_"):
+                labs[k] = np.nan
         lc = st.columns(4)
-        for i, (key, label, lo, hi) in enumerate(lab_defs):
+        for i, (key, label, lo, hi) in enumerate(lab_keys):
             with lc[i % 4]:
-                use = st.checkbox(f"Provide {label}", value=False, key=f"use_{key}")
-                if use:
-                    default = float(np.clip(float(defaults.get(key, (lo + hi) / 2)), lo, hi))
-                    labs[key] = st.number_input(label, lo, hi, default, key=f"val_{key}")
-                else:
-                    labs[key] = np.nan
+                v = st.number_input(label, lo, hi, 0.0, key=f"val_{key}")
+                labs[key] = np.nan if v == 0.0 else float(v)
 
-    if not st.button("Run risk estimates", type="primary", use_container_width=True):
+        submitted = st.form_submit_button("Run risk estimates", type="primary", use_container_width=True)
+
+    if not submitted:
+        if "last_rows" in st.session_state:
+            st.markdown("### Last results")
+            st.dataframe(st.session_state["last_rows"], use_container_width=True, hide_index=True)
         return
 
     values = {
@@ -429,28 +427,28 @@ def render_predict(model: dict) -> None:
     }
 
     rows = predict_all(model, values)
-    # Display table without pandas
+    display = [
+        {
+            "Condition": r["Condition"],
+            "Probability": f"{r['Probability']:.1%}",
+            "Risk band": r["Risk band"],
+        }
+        for r in rows
+    ]
+    st.session_state["last_rows"] = display
+    st.session_state["last_chart"] = {r["Condition"]: r["Probability"] for r in rows}
+    st.session_state["last_hosp"] = predict_one(model, values, "hospitalization_12m")
+    st.session_state["last_top"] = rows[0]
+
     st.markdown("### Results")
-    st.dataframe(
-        [
-            {
-                "Condition": r["Condition"],
-                "Probability": f"{r['Probability']:.1%}",
-                "Risk band": r["Risk band"],
-            }
-            for r in rows
-        ],
-        use_container_width=True,
-        hide_index=True,
-    )
-    chart_data = {r["Condition"]: r["Probability"] for r in rows}
-    st.bar_chart(chart_data, color="#0f5c6e")
-
-    ph = predict_one(model, values, "hospitalization_12m")
-    if ph is not None:
-        st.metric("Synthetic 12-month hospitalization proxy", f"{ph:.1%}")
-
-    top = rows[0]
+    st.dataframe(display, use_container_width=True, hide_index=True)
+    st.bar_chart(st.session_state["last_chart"], color="#0f5c6e")
+    if st.session_state["last_hosp"] is not None:
+        st.metric(
+            "Synthetic 12-month hospitalization proxy",
+            f"{st.session_state['last_hosp']:.1%}",
+        )
+    top = st.session_state["last_top"]
     st.success(
         f"Highest score: **{top['Condition']}** at **{top['Probability']:.1%}** "
         f"({top['Risk band']}) — demo only."

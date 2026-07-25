@@ -9,6 +9,12 @@ font = "sans serif"
 headless = true
 enableCORS = false
 enableXsrfProtection = true
+# Smaller payloads help free-tier Cloud apps
+maxMessageSize = 50
 
 [browser]
 gatherUsageStats = false
+
+[runner]
+# Faster interactive updates where supported
+fastReruns = true
