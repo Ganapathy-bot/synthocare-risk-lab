@@ -1,0 +1,40 @@
+{
+  "is_synthetic": true,
+  "disclaimer": "SYNTHETIC DATA FOR RESEARCH, EDUCATION, AND MODEL DEVELOPMENT ONLY. Not real patient data. Not clinically validated. Not for clinical decision-making.",
+  "generator_name": "SyntheticChronicDiseaseGenerator",
+  "generator_version": "1.2.0",
+  "random_seed": 42,
+  "n_patients": 3000,
+  "version_tag": "clean",
+  "tables": {
+    "patients": {
+      "rows": 3000,
+      "cols": 95
+    },
+    "encounters": {
+      "rows": 19806,
+      "cols": 73
+    },
+    "labs": {
+      "rows": 346895,
+      "cols": 19
+    },
+    "diagnoses": {
+      "rows": 2182,
+      "cols": 14
+    },
+    "medications": {
+      "rows": 1909,
+      "cols": 12
+    },
+    "prediction_targets": {
+      "rows": 19806,
+      "cols": 110
+    },
+    "flat_encounter_level": {
+      "rows": 19806,
+      "cols": 214
+    }
+  },
+  "prevalence_note": "Realized prevalence is a design outcome of the latent process, not a census estimate. RA and some rarer outcomes are modestly enriched for ML learnability; do not treat as population-representative."
+}

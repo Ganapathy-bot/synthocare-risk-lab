@@ -1,0 +1,44 @@
+# Class Distribution Report (SYNTHETIC DATA)
+
+                                    task     disease  n_pos  n_neg  prevalence  n_ineligible_or_censored  prevalence_among_eligible
+       disease_present_at_encounter_t2dm        t2dm   1625  18181    0.082046                       NaN                        NaN
+        new_disease_within_6_months_t2dm        t2dm    661  14759         NaN                    4386.0                   0.042866
+       new_disease_within_12_months_t2dm        t2dm   1156  12402         NaN                    6248.0                   0.085263
+       new_disease_within_36_months_t2dm        t2dm   2066   6675         NaN                   11065.0                   0.236357
+        disease_present_at_encounter_ckd         ckd   1221  18585    0.061648                       NaN                        NaN
+         new_disease_within_6_months_ckd         ckd    435  15446         NaN                    3925.0                   0.027391
+        new_disease_within_12_months_ckd         ckd    783  13036         NaN                    5987.0                   0.056661
+        new_disease_within_36_months_ckd         ckd   1418   7045         NaN                   11343.0                   0.167553
+        disease_present_at_encounter_cad         cad   1510  18296    0.076240                       NaN                        NaN
+         new_disease_within_6_months_cad         cad    603  15056         NaN                    4147.0                   0.038508
+        new_disease_within_12_months_cad         cad    978  12710         NaN                    6118.0                   0.071449
+        new_disease_within_36_months_cad         cad   1711   6851         NaN                   11244.0                   0.199836
+         disease_present_at_encounter_hf          hf   1123  18683    0.056700                       NaN                        NaN
+          new_disease_within_6_months_hf          hf    385  15566         NaN                    3855.0                   0.024136
+         new_disease_within_12_months_hf          hf    670  13120         NaN                    6016.0                   0.048586
+         new_disease_within_36_months_hf          hf   1264   7072         NaN                   11470.0                   0.151631
+        disease_present_at_encounter_htn         htn   2361  17445    0.119206                       NaN                        NaN
+         new_disease_within_6_months_htn         htn    945  13752         NaN                    5109.0                   0.064299
+        new_disease_within_12_months_htn         htn   1608  11522         NaN                    6676.0                   0.122468
+        new_disease_within_36_months_htn         htn   2938   6071         NaN                   10797.0                   0.326118
+       disease_present_at_encounter_copd        copd    415  19391    0.020953                       NaN                        NaN
+        new_disease_within_6_months_copd        copd    156  16490         NaN                    3160.0                   0.009372
+       new_disease_within_12_months_copd        copd    269  14042         NaN                    5495.0                   0.018797
+       new_disease_within_36_months_copd        copd    565   7666         NaN                   11575.0                   0.068643
+  disease_present_at_encounter_cld_masld   cld_masld   1413  18393    0.071342                       NaN                        NaN
+   new_disease_within_6_months_cld_masld   cld_masld    570  15127         NaN                    4109.0                   0.036313
+  new_disease_within_12_months_cld_masld   cld_masld    948  12763         NaN                    6095.0                   0.069142
+  new_disease_within_36_months_cld_masld   cld_masld   1790   6873         NaN                   11143.0                   0.206626
+         disease_present_at_encounter_ra          ra    125  19681    0.006311                       NaN                        NaN
+          new_disease_within_6_months_ra          ra     36  16934         NaN                    2836.0                   0.002121
+         new_disease_within_12_months_ra          ra     71  14410         NaN                    5325.0                   0.004903
+         new_disease_within_36_months_ra          ra    143   7950         NaN                   11713.0                   0.017670
+disease_present_at_encounter_hypothyroid hypothyroid    329  19477    0.016611                       NaN                        NaN
+ new_disease_within_6_months_hypothyroid hypothyroid    110  16638         NaN                    3058.0                   0.006568
+new_disease_within_12_months_hypothyroid hypothyroid    171  14159         NaN                    5476.0                   0.011933
+new_disease_within_36_months_hypothyroid hypothyroid    328   7793         NaN                   11685.0                   0.040389
+ disease_present_at_encounter_alzheimers  alzheimers    342  19464    0.017267                       NaN                        NaN
+  new_disease_within_6_months_alzheimers  alzheimers    137  16582         NaN                    3087.0                   0.008194
+ new_disease_within_12_months_alzheimers  alzheimers    235  14106         NaN                    5465.0                   0.016387
+ new_disease_within_36_months_alzheimers  alzheimers    447   7757         NaN                   11602.0                   0.054486
+        hospitalization_within_12_months         any   1452  17903         NaN                       NaN                   0.075019

@@ -1,0 +1,11 @@
+disease,label,prevalence
+t2dm,Type 2 diabetes mellitus,0.15766666666666668
+ckd,Chronic kidney disease,0.11
+cad,Coronary artery disease,0.14066666666666666
+hf,Heart failure,0.10066666666666667
+htn,Hypertension,0.21766666666666667
+copd,Chronic obstructive pulmonary disease,0.044
+cld_masld,Chronic liver disease / MASLD,0.13266666666666665
+ra,Rheumatoid arthritis,0.010666666666666666
+hypothyroid,Hypothyroidism,0.027
+alzheimers,Alzheimer’s disease / related cognitive decline,0.034

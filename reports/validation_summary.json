@@ -1,0 +1,697 @@
+{
+  "meta": {
+    "is_synthetic": true,
+    "disclaimer": "SYNTHETIC DATA \u2014 research/education only. Not for clinical use.",
+    "generator_name": "SyntheticChronicDiseaseGenerator",
+    "generator_version": "1.2.0",
+    "random_seed": 42
+  },
+  "validation_summary": {
+    "n_patients": 3000,
+    "n_encounters": 19806,
+    "n_labs": 346895,
+    "n_diagnoses": 2182,
+    "n_medications": 1909,
+    "n_target_rows": 19806,
+    "partition_counts": {
+      "train": 2100,
+      "test": 450,
+      "val": 450
+    },
+    "partition_patient_exclusivity": "PASS",
+    "lab_bound_violations_excluding_flagged_errors": 0,
+    "encounter_bound_violations": {},
+    "diagnoses_by_disease": {
+      "htn": 438,
+      "t2dm": 335,
+      "cld_masld": 310,
+      "cad": 305,
+      "ckd": 291,
+      "hf": 248,
+      "alzheimers": 87,
+      "copd": 85,
+      "hypothyroid": 54,
+      "ra": 29
+    },
+    "negative_lab_values": 0,
+    "negative_flagged_as_error": 0,
+    "patients_with_unsorted_encounters": 0,
+    "patient_level_latent_prevalence": {
+      "t2dm": 0.15766666666666668,
+      "ckd": 0.11,
+      "cad": 0.14066666666666666,
+      "hf": 0.10066666666666667,
+      "htn": 0.21766666666666667,
+      "copd": 0.044,
+      "cld_masld": 0.13266666666666665,
+      "ra": 0.010666666666666666,
+      "hypothyroid": 0.027,
+      "alzheimers": 0.034
+    },
+    "leakage_audit": {
+      "status": "PASS",
+      "findings": [
+        "OK: each patient in exactly one partition",
+        "OK: feature_cutoff equals prediction_timestamp",
+        "Documented 94 target/label columns excluded from feature sets",
+        "OK: no single screened biomarker perfectly determines disease labels",
+        "OK by design: medication effects applied only when day >= treatment_start; prediction features should use labs/vitals/meds with days_from_index <= feature_cutoff",
+        "OK by design: train/val/test split is patient-level; temporal holdout flagged via is_external_style_holdout"
+      ],
+      "n_target_columns": 94
+    },
+    "issues": [],
+    "overall_status": "PASS"
+  },
+  "missingness_report": {
+    "mechanism_notes": {
+      "MCAR": "Random non-ordering of some routine tests (~15% routine panel gaps)",
+      "MAR": "Specialty tests ordered more for higher latent severity / age / abnormal screens",
+      "MNAR": "Limited access reduces specialty tests; loss to follow-up related to disease control"
+    },
+    "lab_coverage_by_analyte": {
+      "fasting_plasma_glucose": {
+        "encounters_with_result": 16736,
+        "coverage_rate": 0.8449964657174593
+      },
+      "random_plasma_glucose": {
+        "encounters_with_result": 5876,
+        "coverage_rate": 0.2966777744117944
+      },
+      "hba1c": {
+        "encounters_with_result": 13458,
+        "coverage_rate": 0.6794910633141472
+      },
+      "fasting_insulin": {
+        "encounters_with_result": 67,
+        "coverage_rate": 0.0033828132889023527
+      },
+      "c_peptide": {
+        "encounters_with_result": 70,
+        "coverage_rate": 0.003534282540644249
+      },
+      "triglycerides": {
+        "encounters_with_result": 11040,
+        "coverage_rate": 0.5574068464101787
+      },
+      "hdl_c": {
+        "encounters_with_result": 11040,
+        "coverage_rate": 0.5574068464101787
+      },
+      "ldl_c": {
+        "encounters_with_result": 11040,
+        "coverage_rate": 0.5574068464101787
+      },
+      "total_cholesterol": {
+        "encounters_with_result": 11040,
+        "coverage_rate": 0.5574068464101787
+      },
+      "serum_creatinine": {
+        "encounters_with_result": 16856,
+        "coverage_rate": 0.8510552357871353
+      },
+      "egfr": {
+        "encounters_with_result": 16827,
+        "coverage_rate": 0.8495910330202969
+      },
+      "bun": {
+        "encounters_with_result": 16845,
+        "coverage_rate": 0.8504998485307482
+      },
+      "uacr": {
+        "encounters_with_result": 6220,
+        "coverage_rate": 0.31404624861153185
+      },
+      "urine_albumin": {
+        "encounters_with_result": 6220,
+        "coverage_rate": 0.31404624861153185
+      },
+      "urine_creatinine": {
+        "encounters_with_result": 6220,
+        "coverage_rate": 0.31404624861153185
+      },
+      "sodium": {
+        "encounters_with_result": 16740,
+        "coverage_rate": 0.8451984247197819
+      },
+      "potassium": {
+        "encounters_with_result": 16819,
+        "coverage_rate": 0.8491871150156518
+      },
+      "bicarbonate": {
+        "encounters_with_result": 16954,
+        "coverage_rate": 0.8560032313440371
+      },
+      "phosphate": {
+        "encounters_with_result": 246,
+        "coverage_rate": 0.012420478642835504
+      },
+      "calcium": {
+        "encounters_with_result": 246,
+        "coverage_rate": 0.012420478642835504
+      },
+      "hemoglobin": {
+        "encounters_with_result": 16836,
+        "coverage_rate": 0.8500454407755226
+      },
+      "hs_crp": {
+        "encounters_with_result": 2985,
+        "coverage_rate": 0.15071190548318691
+      },
+      "crp": {
+        "encounters_with_result": 506,
+        "coverage_rate": 0.025547813793799858
+      },
+      "esr": {
+        "encounters_with_result": 506,
+        "coverage_rate": 0.025547813793799858
+      },
+      "nt_probnp": {
+        "encounters_with_result": 690,
+        "coverage_rate": 0.03483792790063617
+      },
+      "troponin_hs": {
+        "encounters_with_result": 41,
+        "coverage_rate": 0.002070079773805917
+      },
+      "apo_b": {
+        "encounters_with_result": 1377,
+        "coverage_rate": 0.06952438654953044
+      },
+      "lp_a": {
+        "encounters_with_result": 876,
+        "coverage_rate": 0.04422902150863375
+      },
+      "alt": {
+        "encounters_with_result": 12492,
+        "coverage_rate": 0.6307179642532565
+      },
+      "ast": {
+        "encounters_with_result": 12492,
+        "coverage_rate": 0.6307179642532565
+      },
+      "alp": {
+        "encounters_with_result": 7498,
+        "coverage_rate": 0.37857214985357973
+      },
+      "ggt": {
+        "encounters_with_result": 7498,
+        "coverage_rate": 0.37857214985357973
+      },
+      "total_bilirubin": {
+        "encounters_with_result": 7498,
+        "coverage_rate": 0.37857214985357973
+      },
+      "direct_bilirubin": {
+        "encounters_with_result": 155,
+        "coverage_rate": 0.00782591133999798
+      },
+      "albumin": {
+        "encounters_with_result": 7649,
+        "coverage_rate": 0.38619610219125516
+      },
+      "inr": {
+        "encounters_with_result": 155,
+        "coverage_rate": 0.00782591133999798
+      },
+      "platelet_count": {
+        "encounters_with_result": 16797,
+        "coverage_rate": 0.848076340502878
+      },
+      "wbc": {
+        "encounters_with_result": 16863,
+        "coverage_rate": 0.8514086640411996
+      },
+      "eosinophils": {
+        "encounters_with_result": 88,
+        "coverage_rate": 0.004443098051095627
+      },
+      "fev1_pct_predicted": {
+        "encounters_with_result": 5103,
+        "coverage_rate": 0.25764919721296575
+      },
+      "fvc_pct_predicted": {
+        "encounters_with_result": 5103,
+        "coverage_rate": 0.25764919721296575
+      },
+      "fev1_fvc_ratio": {
+        "encounters_with_result": 5103,
+        "coverage_rate": 0.25764919721296575
+      },
+      "spo2": {
+        "encounters_with_result": 10042,
+        "coverage_rate": 0.5070180753307079
+      },
+      "rf": {
+        "encounters_with_result": 506,
+        "coverage_rate": 0.025547813793799858
+      },
+      "anti_ccp": {
+        "encounters_with_result": 455,
+        "coverage_rate": 0.02297283651418762
+      },
+      "tsh": {
+        "encounters_with_result": 4221,
+        "coverage_rate": 0.21311723720084821
+      },
+      "free_t4": {
+        "encounters_with_result": 139,
+        "coverage_rate": 0.007018075330707866
+      },
+      "free_t3": {
+        "encounters_with_result": 65,
+        "coverage_rate": 0.0032818337877410886
+      },
+      "tpo_ab": {
+        "encounters_with_result": 78,
+        "coverage_rate": 0.003938200545289306
+      },
+      "mmse": {
+        "encounters_with_result": 1078,
+        "coverage_rate": 0.054427951125921435
+      },
+      "moca": {
+        "encounters_with_result": 1391,
+        "coverage_rate": 0.07023124305765929
+      },
+      "faq": {
+        "encounters_with_result": 49,
+        "coverage_rate": 0.0024739977784509746
+      }
+    },
+    "encounter_column_null_rate_top": {
+      "is_synthetic": 0.0,
+      "latent_severity_ckd": 0.0,
+      "latent_severity_copd": 0.0,
+      "observed_diagnosis_htn": 0.0,
+      "latent_stage_htn": 0.0,
+      "latent_disease_present_htn": 0.0,
+      "latent_severity_htn": 0.0,
+      "observed_diagnosis_hf": 0.0,
+      "latent_stage_hf": 0.0,
+      "latent_disease_present_hf": 0.0,
+      "latent_severity_hf": 0.0,
+      "observed_diagnosis_cad": 0.0,
+      "latent_stage_cad": 0.0,
+      "latent_disease_present_cad": 0.0,
+      "latent_severity_cad": 0.0,
+      "observed_diagnosis_ckd": 0.0,
+      "latent_stage_ckd": 0.0,
+      "latent_disease_present_copd": 0.0,
+      "latent_stage_copd": 0.0,
+      "observed_diagnosis_copd": 0.0,
+      "latent_severity_hypothyroid": 0.0,
+      "latent_stage_alzheimers": 0.0,
+      "latent_disease_present_alzheimers": 0.0,
+      "latent_severity_alzheimers": 0.0,
+      "observed_diagnosis_hypothyroid": 0.0,
+      "latent_stage_hypothyroid": 0.0,
+      "latent_disease_present_hypothyroid": 0.0,
+      "observed_diagnosis_ra": 0.0,
+      "latent_severity_cld_masld": 0.0,
+      "latent_stage_ra": 0.0
+    }
+  },
+  "fairness_report": {
+    "sensitive_variables": [
+      "sex_at_birth",
+      "gender",
+      "ethnicity",
+      "ses_group",
+      "access_to_care",
+      "region",
+      "age_at_index"
+    ],
+    "n_by_sex_at_birth": {
+      "female": 1596,
+      "male": 1404
+    },
+    "n_by_ethnicity": {
+      "White": 1609,
+      "Hispanic_or_Latino": 458,
+      "Black_or_African_American": 458,
+      "Asian": 239,
+      "Other_or_Multiple": 236
+    },
+    "n_by_ses_group": {
+      "medium": 1414,
+      "low": 831,
+      "high": 755
+    },
+    "n_by_access_to_care": {
+      "standard": 1709,
+      "limited": 711,
+      "enhanced": 580
+    },
+    "n_by_region": {
+      "urban": 1338,
+      "suburban": 1075,
+      "rural": 587
+    },
+    "n_by_age_group": {
+      "55-69": 1073,
+      "40-54": 889,
+      "70+": 690,
+      "18-39": 348
+    },
+    "latent_prevalence_by_sex": {
+      "t2dm": {
+        "female": 0.15288220551378445,
+        "male": 0.1631054131054131
+      },
+      "ckd": {
+        "female": 0.11528822055137844,
+        "male": 0.10398860398860399
+      },
+      "cad": {
+        "female": 0.14724310776942356,
+        "male": 0.13319088319088318
+      },
+      "hf": {
+        "female": 0.10714285714285714,
+        "male": 0.0933048433048433
+      },
+      "htn": {
+        "female": 0.2199248120300752,
+        "male": 0.2150997150997151
+      },
+      "copd": {
+        "female": 0.043859649122807015,
+        "male": 0.04415954415954416
+      },
+      "cld_masld": {
+        "female": 0.14160401002506265,
+        "male": 0.1225071225071225
+      },
+      "ra": {
+        "female": 0.015664160401002505,
+        "male": 0.004985754985754986
+      },
+      "hypothyroid": {
+        "female": 0.03571428571428571,
+        "male": 0.017094017094017096
+      },
+      "alzheimers": {
+        "female": 0.03320802005012531,
+        "male": 0.0349002849002849
+      }
+    },
+    "mean_labs_per_encounter_by_access": {
+      "enhanced": 17.55997576736672,
+      "limited": 17.429762668377165,
+      "standard": 17.518064076346285
+    },
+    "underrepresented_groups": [
+      "ethnicity=Asian share=0.080",
+      "ethnicity=Other_or_Multiple share=0.079"
+    ],
+    "proxy_variable_warnings": [
+      "ses_group and access_to_care may proxy structural inequities; do not use as clinical features for deployment decisions",
+      "ethnicity is for fairness auditing only; avoid as a direct predictive feature without causal justification",
+      "region and access correlate with test density \u2014 models may learn care intensity rather than biology"
+    ],
+    "interpretation_caution": [
+      "Synthetic demographic effects are mild and non-deterministic; real-world disparities differ",
+      "Subgroup performance on this dataset does not validate fairness in clinical use",
+      "Smaller groups (e.g., RA positives within ethnicity strata) may be unstable"
+    ]
+  },
+  "leakage_audit": {
+    "status": "PASS",
+    "findings": [
+      "OK: each patient in exactly one partition",
+      "OK: feature_cutoff equals prediction_timestamp",
+      "Documented 94 target/label columns excluded from feature sets",
+      "OK: no single screened biomarker perfectly determines disease labels",
+      "OK by design: medication effects applied only when day >= treatment_start; prediction features should use labs/vitals/meds with days_from_index <= feature_cutoff",
+      "OK by design: train/val/test split is patient-level; temporal holdout flagged via is_external_style_holdout"
+    ],
+    "n_target_columns": 94
+  },
+  "summary_statistics": {
+    "patient_continuous": {
+      "age_at_index": {
+        "count": 3000.0,
+        "mean": 58.205200000000005,
+        "std": 14.60260747292537,
+        "min": 18.0,
+        "25%": 47.8,
+        "50%": 58.6,
+        "75%": 69.125,
+        "max": 95.0
+      },
+      "bmi_baseline": {
+        "count": 3000.0,
+        "mean": 28.0551,
+        "std": 6.335699463034478,
+        "min": 16.0,
+        "25%": 23.6,
+        "50%": 27.4,
+        "75%": 31.9,
+        "max": 55.0
+      },
+      "pack_years": {
+        "count": 3000.0,
+        "mean": 6.579166666666667,
+        "std": 10.2869323074305,
+        "min": 0.0,
+        "25%": 0.0,
+        "50%": 0.0,
+        "75%": 10.6,
+        "max": 80.0
+      },
+      "height_cm": {
+        "count": 3000.0,
+        "mean": 168.43463333333335,
+        "std": 9.95713774449815,
+        "min": 140.0,
+        "25%": 160.775,
+        "50%": 168.2,
+        "75%": 176.0,
+        "max": 199.7
+      },
+      "weight_kg_baseline": {
+        "count": 3000.0,
+        "mean": 79.9287,
+        "std": 20.667629680627137,
+        "min": 36.3,
+        "25%": 65.0,
+        "50%": 77.7,
+        "75%": 91.92500000000001,
+        "max": 187.4
+      }
+    },
+    "encounter_continuous": {
+      "sbp_mmHg": {
+        "count": 19806.0,
+        "mean": 122.10734120973443,
+        "std": 9.095481600135525,
+        "min": 88.0,
+        "25%": 116.0,
+        "50%": 122.0,
+        "75%": 128.0,
+        "max": 156.0
+      },
+      "dbp_mmHg": {
+        "count": 19806.0,
+        "mean": 76.22346763606988,
+        "std": 5.388014095855304,
+        "min": 53.0,
+        "25%": 73.0,
+        "50%": 76.0,
+        "75%": 80.0,
+        "max": 97.0
+      },
+      "heart_rate_bpm": {
+        "count": 19806.0,
+        "mean": 73.60577602746642,
+        "std": 6.372291933033303,
+        "min": 48.0,
+        "25%": 69.0,
+        "50%": 73.0,
+        "75%": 78.0,
+        "max": 102.0
+      },
+      "bmi": {
+        "count": 19806.0,
+        "mean": 28.026709078057156,
+        "std": 6.320627602897232,
+        "min": 15.1,
+        "25%": 23.5,
+        "50%": 27.4,
+        "75%": 32.0,
+        "max": 55.8
+      },
+      "spo2_percent": {
+        "count": 19806.0,
+        "mean": 97.34368373220236,
+        "std": 1.0414180812911393,
+        "min": 89.0,
+        "25%": 97.0,
+        "50%": 97.0,
+        "75%": 98.0,
+        "max": 100.0
+      }
+    },
+    "lab_distributions": {
+      "hba1c": {
+        "n": 13458,
+        "mean": 5.815521622826571,
+        "std": 0.6054354495243435,
+        "p50": 5.76,
+        "p05": 4.9,
+        "p95": 6.68
+      },
+      "egfr": {
+        "n": 16827,
+        "mean": 77.95723004694835,
+        "std": 24.1582193296336,
+        "p50": 79.68,
+        "p05": 35.61,
+        "p95": 114.16099999999997
+      },
+      "ldl_c": {
+        "n": 11040,
+        "mean": 112.93510869565218,
+        "std": 19.38597335076442,
+        "p50": 113.935,
+        "p05": 79.13,
+        "p95": 142.82049999999998
+      },
+      "alt": {
+        "n": 12492,
+        "mean": 33.31274895933397,
+        "std": 11.77924947240336,
+        "p50": 31.71,
+        "p05": 17.401000000000003,
+        "p95": 53.96449999999999
+      },
+      "tsh": {
+        "n": 4221,
+        "mean": 2.2761194029850746,
+        "std": 1.1962457699560094,
+        "p50": 2.25,
+        "p05": 0.05,
+        "p95": 3.21
+      },
+      "nt_probnp": {
+        "n": 690,
+        "mean": 666.3517971014493,
+        "std": 479.3022242532623,
+        "p50": 607.1,
+        "p05": 118.3315,
+        "p95": 1544.1814999999997
+      },
+      "fev1_fvc_ratio": {
+        "n": 5103,
+        "mean": 0.7840844601214971,
+        "std": 0.037202541920946554,
+        "p50": 0.786,
+        "p05": 0.727,
+        "p95": 0.839
+      }
+    },
+    "lab_correlations": {
+      "alt": {
+        "alt": 1.0,
+        "egfr": -0.051,
+        "hba1c": 0.047,
+        "hemoglobin": -0.023,
+        "ldl_c": -0.023,
+        "tsh": 0.016
+      },
+      "egfr": {
+        "alt": -0.051,
+        "egfr": 1.0,
+        "hba1c": -0.065,
+        "hemoglobin": 0.015,
+        "ldl_c": -0.062,
+        "tsh": -0.004
+      },
+      "hba1c": {
+        "alt": 0.047,
+        "egfr": -0.065,
+        "hba1c": 1.0,
+        "hemoglobin": -0.009,
+        "ldl_c": 0.099,
+        "tsh": 0.037
+      },
+      "hemoglobin": {
+        "alt": -0.023,
+        "egfr": 0.015,
+        "hba1c": -0.009,
+        "hemoglobin": 1.0,
+        "ldl_c": 0.01,
+        "tsh": 0.023
+      },
+      "ldl_c": {
+        "alt": -0.023,
+        "egfr": -0.062,
+        "hba1c": 0.099,
+        "hemoglobin": 0.01,
+        "ldl_c": 1.0,
+        "tsh": -0.017
+      },
+      "tsh": {
+        "alt": 0.016,
+        "egfr": -0.004,
+        "hba1c": 0.037,
+        "hemoglobin": 0.023,
+        "ldl_c": -0.017,
+        "tsh": 1.0
+      }
+    },
+    "longitudinal_trajectory_examples": {
+      "mean_hba1c_by_encounter_number_t2dm": {
+        "1": 6.431,
+        "2": 6.51,
+        "3": 6.434,
+        "4": 6.545,
+        "5": 6.482,
+        "6": 6.316,
+        "7": 6.306,
+        "8": 6.426,
+        "9": 6.289,
+        "10": 6.433,
+        "11": 6.196,
+        "12": 6.298,
+        "13": 6.34,
+        "14": 6.789,
+        "15": 6.808
+      }
+    },
+    "partition_age_comparability": {
+      "mean": {
+        "test": 58.43,
+        "train": 58.2,
+        "val": 58.02
+      },
+      "std": {
+        "test": 14.88,
+        "train": 14.64,
+        "val": 14.15
+      },
+      "count": {
+        "test": 450,
+        "train": 2100,
+        "val": 450
+      }
+    },
+    "categorical_frequencies": {
+      "sex_at_birth": {
+        "female": 1596,
+        "male": 1404
+      },
+      "smoking_status": {
+        "never": 1631,
+        "former": 865,
+        "current": 504
+      },
+      "partition": {
+        "train": 2100,
+        "test": 450,
+        "val": 450
+      }
+    }
+  }
+}

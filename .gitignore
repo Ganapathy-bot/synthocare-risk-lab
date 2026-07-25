@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+.venv/
+venv/
+env/
+.python-version
+
+# Jupyter / IDE
+.ipynb_checkpoints/
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Generated bulk data (regenerate with generate_dataset.py)
+# Keep directory structure via .gitkeep; omit large CSV/Parquet dumps from git.
+data/clean/*
+!data/clean/.gitkeep
+!data/clean/manifest.json
+data/noisy/*
+!data/noisy/.gitkeep
+!data/noisy/manifest.json
+
+# If you choose to commit full data locally, do not force-add without LFS.
+*.csv.bak
+
+# Logs / local caches
+*.log
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / temp
+*.tmp
+~$*
