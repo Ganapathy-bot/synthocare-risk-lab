@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SynthoCare Risk Lab – Blog Post</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      max-width: 720px;
+      margin: 40px auto;
+      padding: 0 20px;
+      line-height: 1.6;
+      color: #222;
+    }
+    h1 { font-size: 1.75rem; line-height: 1.3; }
+    h2 { font-size: 1.25rem; margin-top: 1.75rem; color: #0f5c6e; }
+    .note {
+      background: #fff8e6;
+      border-left: 4px solid #c49212;
+      padding: 12px 14px;
+      margin: 20px 0;
+    }
+    .links {
+      background: #f0f8fa;
+      border: 1px solid #cfe3e8;
+      padding: 14px 16px;
+      margin: 20px 0;
+    }
+    a { color: #0f5c6e; }
+    ul { padding-left: 1.25rem; }
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid #ddd;
+      font-size: 0.9rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>SynthoCare Risk Lab: Disease Risk Models Built on Synthetic Data</h1>
+
+  <p>
+    <strong>SynthoCare Risk Lab</strong> is an open project that shows how to build and demo
+    multi-disease risk models using <em>synthetic</em> (computer-generated) patient-style data.
+    It is made for learning, teaching, and pipeline practice—not for real clinical care.
+  </p>
+
+  <div class="note">
+    <strong>Disclaimer:</strong> This project does not use real patient data.
+    Models are not clinically validated. Do not use the app for diagnosis or treatment decisions.
+  </div>
+
+  <div class="links">
+    <p><strong>Live Streamlit app:</strong><br />
+      <a href="https://synthocare.streamlit.app/" target="_blank" rel="noopener">
+        https://synthocare.streamlit.app/
+      </a>
+    </p>
+    <p style="margin-bottom:0;"><strong>GitHub repository:</strong><br />
+      <a href="https://github.com/Ganapathy-bot/synthocare-risk-lab" target="_blank" rel="noopener">
+        https://github.com/Ganapathy-bot/synthocare-risk-lab
+      </a>
+    </p>
+  </div>
+
+  <h2>Why this project?</h2>
+  <p>
+    Real health records are private and hard to share. Students and developers still need
+    realistic data to practice machine learning for chronic disease risk. Synthetic data
+    solves that: you get practice data without exposing real people.
+  </p>
+
+  <h2>What is included?</h2>
+  <ul>
+    <li>Synthetic longitudinal patient data (labs, vitals, symptoms, diagnoses)</li>
+    <li>Machine learning models for multiple chronic conditions</li>
+    <li>A live Streamlit web app for interactive demos</li>
+    <li>Open-source code and documentation on GitHub</li>
+  </ul>
+
+  <h2>Conditions covered (synthetic labels)</h2>
+  <ul>
+    <li>Type 2 diabetes</li>
+    <li>Chronic kidney disease</li>
+    <li>Coronary artery disease</li>
+    <li>Heart failure</li>
+    <li>Hypertension</li>
+    <li>COPD</li>
+    <li>Chronic liver disease / MASLD</li>
+    <li>Rheumatoid arthritis</li>
+    <li>Hypothyroidism</li>
+    <li>Alzheimer’s / cognitive decline</li>
+  </ul>
+
+  <h2>How it works</h2>
+  <ol>
+    <li>Generate synthetic patients and encounter-level features.</li>
+    <li>Split data by patient into train, validation, and test sets.</li>
+    <li>Train risk models for each disease.</li>
+    <li>Deploy a Streamlit app that scores a simple input form.</li>
+  </ol>
+  <p>
+    The app uses age, lifestyle, blood pressure, symptoms, family history, and optional lab values
+    to show demo risk scores. Scores are for education only.
+  </p>
+
+  <h2>How to try it</h2>
+  <p>
+    <strong>Online:</strong>
+    Open the live app →
+    <a href="https://synthocare.streamlit.app/">https://synthocare.streamlit.app/</a>
+  </p>
+  <p>
+    <strong>Code:</strong>
+    Clone or browse the repo →
+    <a href="https://github.com/Ganapathy-bot/synthocare-risk-lab">https://github.com/Ganapathy-bot/synthocare-risk-lab</a>
+  </p>
+  <p>
+    <strong>Local run:</strong>
+  </p>
+  <pre style="background:#f5f5f5;padding:12px;overflow:auto;">
+git clone https://github.com/Ganapathy-bot/synthocare-risk-lab.git
+cd synthocare-risk-lab
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+  </pre>
+
+  <h2>Who is it for?</h2>
+  <ul>
+    <li>Students learning healthcare machine learning</li>
+    <li>Developers building safe demo pipelines</li>
+    <li>Teachers who need an interactive classroom example</li>
+  </ul>
+
+  <h2>Key takeaway</h2>
+  <p>
+    SynthoCare Risk Lab is a <strong>safe sandbox</strong> for practicing disease-risk modeling
+    and demo UIs. Use it to learn. Do not use it for real patient care.
+    Always keep the synthetic-data disclaimer when you share the project.
+  </p>
+
+  <footer>
+    <p>
+      <strong>Links</strong><br />
+      Live app: <a href="https://synthocare.streamlit.app/">https://synthocare.streamlit.app/</a><br />
+      GitHub: <a href="https://github.com/Ganapathy-bot/synthocare-risk-lab">https://github.com/Ganapathy-bot/synthocare-risk-lab</a>
+    </p>
+    <p>Synthetic data · Research and education only · Not for clinical use</p>
+  </footer>
+
+</body>
+</html>
