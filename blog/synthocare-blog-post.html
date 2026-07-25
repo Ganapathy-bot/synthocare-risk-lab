@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="An easy guide to SynthoCare: synthetic patient data, machine learning for chronic disease risk, and a live Streamlit demo — for research and learning only." />
+  <title>SynthoCare Risk Lab — Building Disease-Risk Models Without Real Patient Data</title>
+  <style>
+    :root {
+      --teal: #0f5c6e;
+      --teal-dark: #07242d;
+      --teal-light: #e8f6f8;
+      --accent: #1a9aa8;
+      --warn: #b8860b;
+      --warn-bg: #fff8ea;
+      --text: #1a2b30;
+      --muted: #5a7077;
+      --border: #d5e6ea;
+      --card: #ffffff;
+      --radius: 14px;
+      --shadow: 0 10px 30px rgba(7, 36, 45, 0.08);
+      --max: 720px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text);
+      background: #f4fafb;
+      line-height: 1.65;
+      font-size: 1.05rem;
+    }
+
+    .hero {
+      background: linear-gradient(120deg, var(--teal-dark) 0%, var(--teal) 55%, var(--accent) 100%);
+      color: #fff;
+      padding: 3.2rem 1.25rem 2.8rem;
+    }
+    .hero-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+    }
+    .kicker {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.25);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    .hero h1 {
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.75rem, 4vw, 2.4rem);
+      line-height: 1.2;
+      font-weight: 750;
+    }
+    .hero .subtitle {
+      margin: 0;
+      font-size: 1.1rem;
+      opacity: 0.92;
+      max-width: 38rem;
+    }
+    .meta {
+      margin-top: 1.25rem;
+      font-size: 0.9rem;
+      opacity: 0.85;
+    }
+
+    .wrap {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem 3.5rem;
+    }
+
+    .alert {
+      background: var(--warn-bg);
+      border: 1px solid #f0d7a8;
+      border-left: 5px solid var(--warn);
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      color: #5c4a14;
+      margin: -1.5rem auto 1.75rem;
+      max-width: var(--max);
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .alert strong { color: #4a3a0c; }
+
+    h2 {
+      color: var(--teal);
+      font-size: 1.45rem;
+      margin: 2.2rem 0 0.75rem;
+      line-height: 1.3;
+    }
+    h3 {
+      color: var(--teal-dark);
+      font-size: 1.1rem;
+      margin: 1.5rem 0 0.5rem;
+    }
+    p { margin: 0 0 1rem; }
+    ul, ol { margin: 0 0 1.1rem; padding-left: 1.25rem; }
+    li { margin-bottom: 0.4rem; }
+
+    a {
+      color: var(--teal);
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    a:hover { color: var(--accent); }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.85rem;
+      margin: 1.25rem 0 1.5rem;
+    }
+    @media (min-width: 640px) {
+      .card-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.15rem;
+      box-shadow: var(--shadow);
+    }
+    .card h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1.02rem;
+    }
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .icon { font-size: 1.35rem; margin-bottom: 0.35rem; }
+
+    .steps {
+      counter-reset: step;
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 1.5rem;
+    }
+    .steps li {
+      position: relative;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1rem 1rem 3.4rem;
+      margin-bottom: 0.7rem;
+      box-shadow: var(--shadow);
+    }
+    .steps li::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 0.9rem;
+      top: 1rem;
+      width: 1.7rem;
+      height: 1.7rem;
+      border-radius: 50%;
+      background: var(--teal);
+      color: #fff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .steps strong { color: var(--teal-dark); }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin: 0.75rem 0 1.25rem;
+    }
+    .chip {
+      background: var(--teal-light);
+      border: 1px solid var(--border);
+      color: var(--teal);
+      padding: 0.35rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .callout {
+      background: var(--teal-light);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.2rem;
+      margin: 1.25rem 0;
+    }
+    .callout h3 { margin-top: 0; }
+
+    .links {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.15rem 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .links ul { margin-bottom: 0; }
+
+    .faq details {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.6rem;
+    }
+    .faq summary {
+      cursor: pointer;
+      font-weight: 650;
+      color: var(--teal-dark);
+    }
+    .faq details p {
+      margin: 0.6rem 0 0;
+      color: var(--muted);
+      font-size: 0.97rem;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    code {
+      background: #eef6f7;
+      padding: 0.12rem 0.35rem;
+      border-radius: 5px;
+      font-size: 0.9em;
+    }
+    pre {
+      background: var(--teal-dark);
+      color: #e8fbff;
+      padding: 1rem 1.1rem;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 0.88rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="kicker">Research · Education · Synthetic Data</div>
+      <h1>How we built a disease-risk demo without using real patient records</h1>
+      <p class="subtitle">
+        A simple walkthrough of <strong>SynthoCare Risk Lab</strong> — synthetic chronic-disease data,
+        machine-learning models, and a live Streamlit app you can try in the browser.
+      </p>
+      <p class="meta">Written for students, developers, and health-tech learners · Easy language · No clinical claims</p>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <aside class="alert" role="note">
+      <strong>Important safety note:</strong>
+      Everything described here is built on <em>computer-generated (synthetic)</em> data.
+      The live app is for learning and demos only. It is <strong>not</strong> a medical device,
+      <strong>not</strong> clinically validated, and must <strong>not</strong> be used to diagnose
+      or treat real people.
+    </aside>
+
+    <article>
+      <h2>Why this project exists</h2>
+      <p>
+        Real electronic health records are sensitive and hard to share. Students and engineers still need
+        realistic practice data to learn how disease-risk models are built — without putting privacy at risk.
+      </p>
+      <p>
+        <strong>SynthoCare Risk Lab</strong> solves that by creating <strong>fake but realistic-looking</strong>
+        patient-style records, training simple risk models on them, and putting the result behind a friendly
+        web interface.
+      </p>
+
+      <div class="card-grid">
+        <div class="card">
+          <div class="icon">🧪</div>
+          <h3>Synthetic patients</h3>
+          <p>Thousands of made-up longitudinal records with labs, vitals, symptoms, and diagnoses.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🤖</div>
+          <h3>Machine learning</h3>
+          <p>Models estimate the chance of several chronic conditions from encounter-style inputs.</p>
+        </div>
+        <div class="card">
+          <div class="icon">🌐</div>
+          <h3>Live web demo</h3>
+          <p>A Streamlit app you can open in a browser and try with sample scenarios.</p>
+        </div>
+        <div class="card">
+          <div class="icon">📚</div>
+          <h3>Open documentation</h3>
+          <p>Code, dataset notes, and limits are public on GitHub for teaching and reuse.</p>
+        </div>
+      </div>
+
+      <h2>What diseases are covered?</h2>
+      <p>The demo focuses on common long-term conditions (all labels are synthetic):</p>
+      <div class="chips">
+        <span class="chip">Type 2 diabetes</span>
+        <span class="chip">Chronic kidney disease</span>
+        <span class="chip">Coronary artery disease</span>
+        <span class="chip">Heart failure</span>
+        <span class="chip">Hypertension</span>
+        <span class="chip">COPD</span>
+        <span class="chip">Liver disease / MASLD</span>
+        <span class="chip">Rheumatoid arthritis</span>
+        <span class="chip">Hypothyroidism</span>
+        <span class="chip">Cognitive decline</span>
+      </div>
+      <p>
+        Models do <strong>not</strong> “see” future information. They only use things that would be available
+        at a single visit idea: age, lifestyle, blood pressure, symptoms, family history, and optional lab values.
+      </p>
+
+      <h2>How it works (in plain English)</h2>
+      <ol class="steps">
+        <li>
+          <strong>Generate synthetic data.</strong>
+          A script invents demographics, lifestyle risks, hidden disease “states,” labs that move over time,
+          and delayed diagnoses — similar in spirit to real clinical patterns, but fully fake.
+        </li>
+        <li>
+          <strong>Split by patient.</strong>
+          People go into train / validation / test groups. The same synthetic person never appears in two groups.
+          That prevents a common beginner mistake called <em>data leakage</em>.
+        </li>
+        <li>
+          <strong>Train simple risk models.</strong>
+          For each disease, the model learns patterns that tend to go with higher risk in the synthetic world
+          (for example, higher HbA1c patterns for diabetes-like labels).
+        </li>
+        <li>
+          <strong>Export a tiny “fast” model.</strong>
+          Coefficients are saved as a small JSON file so the live website starts quickly without heavy libraries.
+        </li>
+        <li>
+          <strong>Run the Streamlit app.</strong>
+          Users fill a form (age, vitals, optional labs) and get multi-disease probability scores — clearly labeled as demo only.
+        </li>
+      </ol>
+
+      <h2>What you will see in the live app</h2>
+      <ul>
+        <li><strong>Home</strong> — project overview and safety disclaimer</li>
+        <li><strong>Risk prediction</strong> — form to enter a scenario and run scores</li>
+        <li><strong>Model metrics</strong> — how the models performed on held-out synthetic data</li>
+        <li><strong>About &amp; limits</strong> — what the tool is for and what it is not for</li>
+      </ul>
+
+      <div class="callout">
+        <h3>Think of the scores like a practice exam, not a doctor</h3>
+        <p>
+          High scores in the app mean: “In our synthetic training world, similar patterns often matched this label.”
+          They do <strong>not</strong> mean a real person has that disease. Real care needs real clinicians and validated tools.
+        </p>
+      </div>
+
+      <h2>Who is this for?</h2>
+      <ul>
+        <li>Students learning healthcare machine learning</li>
+        <li>Engineers building data pipelines who need a safe demo dataset</li>
+        <li>Teachers who want an interactive classroom example</li>
+        <li>Product teams prototyping UI for risk dashboards (with synthetic data only)</li>
+      </ul>
+
+      <h2>What this is <em>not</em></h2>
+      <ul>
+        <li>Not real patient data</li>
+        <li>Not a hospital system</li>
+        <li>Not FDA-cleared or clinically certified software</li>
+        <li>Not a replacement for diagnosis, triage, or treatment decisions</li>
+      </ul>
+
+      <h2>Try it yourself</h2>
+      <div class="links">
+        <ul>
+          <li><strong>Live app:</strong> <a href="https://synthocare.streamlit.app/" target="_blank" rel="noopener">https://synthocare.streamlit.app/</a></li>
+          <li><strong>GitHub code:</strong> <a href="https://github.com/Ganapathy-bot/synthocare-risk-lab" target="_blank" rel="noopener">https://github.com/Ganapathy-bot/synthocare-risk-lab</a></li>
+        </ul>
+        <p style="margin: 0.9rem 0 0; color: var(--muted); font-size: 0.95rem;">
+          Tip: Free Streamlit Cloud apps can start slowly after idle time, or occasionally show a temporary CPU throttle.
+          That is a hosting limit — not a medical issue. You can also run the app on your own computer from the GitHub repo.
+        </p>
+      </div>
+
+      <h3>Run locally (optional)</h3>
+      <pre>git clone https://github.com/Ganapathy-bot/synthocare-risk-lab.git
+cd synthocare-risk-lab
+pip install -r requirements.txt
+streamlit run streamlit_app.py</pre>
+      <p>Then open <code>http://localhost:8501</code> in your browser.</p>
+
+      <h2>Key ideas we want learners to take away</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>1. Privacy first</h3>
+          <p>Synthetic data lets teams practice without exposing real individuals.</p>
+        </div>
+        <div class="card">
+          <h3>2. Split carefully</h3>
+          <p>Patient-level train/test splits reduce leakage and optimistic scores.</p>
+        </div>
+        <div class="card">
+          <h3>3. Metrics ≠ usefulness</h3>
+          <p>Good accuracy on synthetic hold-out data does not prove clinical value.</p>
+        </div>
+        <div class="card">
+          <h3>4. Labels the UI clearly</h3>
+          <p>Every serious health AI demo should state limits as loudly as features.</p>
+        </div>
+      </div>
+
+      <h2>FAQ</h2>
+      <div class="faq">
+        <details>
+          <summary>Is any data from real hospitals?</summary>
+          <p>No. All patient-style rows are generated by code for research and teaching.</p>
+        </details>
+        <details>
+          <summary>Can doctors use this for patients?</summary>
+          <p>No. It is not validated for care and is not intended for clinical decisions.</p>
+        </details>
+        <details>
+          <summary>Why are there multiple disease scores?</summary>
+          <p>Chronic conditions often co-exist. The demo shows multi-condition screening-style outputs, not a single diagnosis.</p>
+        </details>
+        <details>
+          <summary>Why is the website sometimes slow?</summary>
+          <p>Free Streamlit hosting can cold-start after idle time or throttle CPU under load. Local runs are usually faster and more stable.</p>
+        </details>
+        <details>
+          <summary>Can I reuse the code?</summary>
+          <p>Yes — the project is open on GitHub (MIT-style open license with a clear non-clinical notice). Please keep the synthetic/disclaimer messaging if you remix it.</p>
+        </details>
+      </div>
+
+      <h2>Closing thought</h2>
+      <p>
+        Healthcare AI education needs safe sandboxes. SynthoCare Risk Lab is one such sandbox:
+        realistic enough to practice pipelines and product thinking, honest enough to say
+        <strong>“synthetic only — not for patient care.”</strong>
+      </p>
+      <p>
+        If you try the live demo, treat every score as a teaching example. The real future of clinical AI
+        still depends on rigorous validation with real-world data, ethics review, and clinical governance.
+      </p>
+
+      <footer>
+        <p>
+          <strong>SynthoCare Risk Lab</strong> · Synthetic data · Research &amp; education only<br />
+          Live app: <a href="https://synthocare.streamlit.app/">synthocare.streamlit.app</a> ·
+          Code: <a href="https://github.com/Ganapathy-bot/synthocare-risk-lab">GitHub</a>
+        </p>
+        <p style="margin-bottom:0;">
+          You may copy this HTML post for blogs, LinkedIn articles, or class handouts.
+          Please keep the safety disclaimer.
+        </p>
+      </footer>
+    </article>
+  </div>
+
+</body>
+</html>
