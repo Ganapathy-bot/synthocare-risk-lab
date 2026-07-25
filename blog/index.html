@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="SynthoCare Risk Lab" />
+  <meta name="description" content="Easy blog post: building a chronic disease risk demo with synthetic data, machine learning, and a live Streamlit app. Research and education only." />
+  <meta property="og:title" content="SynthoCare: Disease Risk Models Without Real Patient Data" />
+  <meta property="og:description" content="A simple guide to synthetic health data, ML risk scores, and a live Streamlit demo for learning—not for clinical care." />
+  <meta property="og:type" content="article" />
+  <title>SynthoCare: How We Built a Disease-Risk Demo Without Real Patient Data</title>
+  <style>
+    :root {
+      --bg: #f6fbfc;
+      --paper: #ffffff;
+      --ink: #14262b;
+      --muted: #5a7077;
+      --teal: #0f5c6e;
+      --teal-deep: #083845;
+      --mint: #e7f5f7;
+      --line: #d3e5e9;
+      --gold: #c49212;
+      --gold-bg: #fff9eb;
+      --radius: 16px;
+      --shadow: 0 12px 36px rgba(8, 56, 69, 0.07);
+      --width: 680px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", Times, serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.75;
+      font-size: 1.125rem;
+    }
+
+    /* Top bar */
+    .topbar {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--teal-deep);
+      color: #d9f2f5;
+      font-size: 0.82rem;
+      padding: 0.55rem 1rem;
+      text-align: center;
+    }
+    .topbar a { color: #fff; font-weight: 600; }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, #06242d 0%, #0f5c6e 48%, #18a0ad 100%);
+      color: #fff;
+      padding: 3.5rem 1.25rem 3rem;
+    }
+    .cover-inner {
+      max-width: var(--width);
+      margin: 0 auto;
+    }
+    .eyebrow {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.1);
+      padding: 0.35rem 0.8rem;
+      border-radius: 999px;
+      margin-bottom: 1.1rem;
+    }
+    .cover h1 {
+      font-size: clamp(1.85rem, 4.5vw, 2.55rem);
+      line-height: 1.18;
+      margin: 0 0 1rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .cover .dek {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-size: 1.05rem;
+      line-height: 1.55;
+      opacity: 0.93;
+      margin: 0;
+      max-width: 36rem;
+    }
+    .byline {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin-top: 1.5rem;
+      font-size: 0.88rem;
+      opacity: 0.82;
+    }
+
+    /* Article body */
+    .article {
+      max-width: var(--width);
+      margin: 0 auto;
+      padding: 0 1.25rem 4rem;
+    }
+
+    .warning {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--gold-bg);
+      border: 1px solid #efd7a0;
+      border-left: 6px solid var(--gold);
+      border-radius: 12px;
+      padding: 1rem 1.15rem;
+      margin: -1.75rem 0 2rem;
+      box-shadow: var(--shadow);
+      color: #5a4510;
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+    .warning strong { color: #46360c; }
+
+    h2 {
+      font-size: 1.45rem;
+      color: var(--teal-deep);
+      margin: 2.4rem 0 0.85rem;
+      line-height: 1.3;
+    }
+    h3 {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      font-size: 1.02rem;
+      color: var(--teal);
+      margin: 1.6rem 0 0.5rem;
+    }
+    p { margin: 0 0 1.05rem; }
+    ul, ol {
+      margin: 0 0 1.15rem;
+      padding-left: 1.3rem;
+    }
+    li { margin-bottom: 0.45rem; }
+
+    a {
+      color: var(--teal);
+      font-weight: 600;
+    }
+    a:hover { color: #18a0ad; }
+
+    .lead {
+      font-size: 1.2rem;
+      color: #2a3f45;
+      border-left: 4px solid var(--teal);
+      padding-left: 1rem;
+      margin: 0 0 1.5rem;
+    }
+
+    /* Feature boxes */
+    .grid {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      display: grid;
+      gap: 0.8rem;
+      margin: 1.25rem 0 1.5rem;
+    }
+    @media (min-width: 600px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+    .box {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.05rem 1.1rem;
+      box-shadow: var(--shadow);
+    }
+    .box .emoji { font-size: 1.4rem; display: block; margin-bottom: 0.35rem; }
+    .box h3 {
+      margin: 0 0 0.35rem;
+      font-size: 1rem;
+      color: var(--teal-deep);
+    }
+    .box p {
+      margin: 0;
+      font-size: 0.92rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* Numbered steps */
+    .pipeline {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      list-style: none;
+      padding: 0;
+      margin: 1rem 0 1.5rem;
+      counter-reset: s;
+    }
+    .pipeline li {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 1rem 1rem 1rem 3.5rem;
+      margin-bottom: 0.65rem;
+      position: relative;
+      box-shadow: var(--shadow);
+      font-size: 0.98rem;
+      line-height: 1.5;
+    }
+    .pipeline li::before {
+      counter-increment: s;
+      content: counter(s);
+      position: absolute;
+      left: 0.95rem;
+      top: 1rem;
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 50%;
+      background: var(--teal);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: grid;
+      place-items: center;
+    }
+    .pipeline strong {
+      color: var(--teal-deep);
+      display: block;
+      margin-bottom: 0.2rem;
+      font-size: 0.98rem;
+    }
+
+    .tags {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin: 0.75rem 0 1.25rem;
+    }
+    .tag {
+      background: var(--mint);
+      color: var(--teal);
+      border: 1px solid var(--line);
+      padding: 0.3rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 650;
+    }
+
+    .cta {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.3rem;
+      box-shadow: var(--shadow);
+      margin: 1.5rem 0;
+    }
+    .cta h3 {
+      margin: 0 0 0.65rem;
+      font-size: 1.05rem;
+      color: var(--teal-deep);
+    }
+    .cta a.button {
+      display: inline-block;
+      background: var(--teal);
+      color: #fff !important;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 0.65rem 1.1rem;
+      border-radius: 10px;
+      margin: 0.35rem 0.4rem 0.35rem 0;
+      font-size: 0.92rem;
+    }
+    .cta a.button.secondary {
+      background: #fff;
+      color: var(--teal) !important;
+      border: 2px solid var(--teal);
+    }
+    .cta p {
+      margin: 0.75rem 0 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    pre {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--teal-deep);
+      color: #dff6f9;
+      padding: 1rem 1.1rem;
+      border-radius: 12px;
+      overflow-x: auto;
+      font-size: 0.82rem;
+      line-height: 1.55;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--mint);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      font-size: 0.88em;
+    }
+    pre code { background: transparent; padding: 0; color: inherit; }
+
+    .takeaways {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--mint);
+      border-radius: var(--radius);
+      padding: 1.2rem 1.3rem;
+      border: 1px solid var(--line);
+    }
+    .takeaways h3 {
+      margin: 0 0 0.6rem;
+      color: var(--teal-deep);
+    }
+    .takeaways ol {
+      margin: 0;
+      padding-left: 1.2rem;
+      font-size: 0.95rem;
+      color: #2c454c;
+    }
+
+    .faq details {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.85rem 1rem;
+      margin-bottom: 0.55rem;
+    }
+    .faq summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--teal-deep);
+      font-size: 0.95rem;
+    }
+    .faq details p {
+      margin: 0.55rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    footer.post-footer {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      margin-top: 2.75rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.55;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    Blog post · SynthoCare Risk Lab ·
+    <a href="https://synthocare.streamlit.app/" target="_blank" rel="noopener">Live demo</a>
+    ·
+    <a href="https://github.com/Ganapathy-bot/synthocare-risk-lab" target="_blank" rel="noopener">GitHub</a>
+  </div>
+
+  <header class="cover">
+    <div class="cover-inner">
+      <div class="eyebrow">Health AI · Synthetic Data · Open Source</div>
+      <h1>How we built a disease-risk demo without using real patient records</h1>
+      <p class="dek">
+        Meet <strong>SynthoCare Risk Lab</strong> — a simple project that creates fake but realistic health data,
+        trains multi-disease risk models, and shares a live web app for learning and demos.
+      </p>
+      <p class="byline">Easy-read blog for students, developers &amp; educators · Reading time ~6 minutes</p>
+    </div>
+  </header>
+
+  <main class="article">
+    <div class="warning" role="note">
+      <strong>Please read first:</strong>
+      This project uses <em>synthetic</em> (computer-generated) data only.
+      The app is for education and research demos. It is <strong>not</strong> a medical device,
+      <strong>not</strong> clinically validated, and must <strong>not</strong> be used to diagnose,
+      treat, or make decisions about real patients.
+    </div>
+
+    <p class="lead">
+      Real medical records are private and hard to share. But people still need safe ways to practice
+      healthcare machine learning. SynthoCare builds that practice sandbox—from data to models to a live website.
+    </p>
+
+    <h2>The problem in one sentence</h2>
+    <p>
+      If you want to learn how disease-risk models work, you need data that <em>looks</em> clinical—
+      but you should not need to risk anyone’s privacy to get started.
+    </p>
+
+    <h2>What we built</h2>
+    <div class="grid">
+      <div class="box">
+        <span class="emoji">🧪</span>
+        <h3>Synthetic patients</h3>
+        <p>Thousands of made-up longitudinal records: vitals, labs, symptoms, medicines, and diagnoses.</p>
+      </div>
+      <div class="box">
+        <span class="emoji">🤖</span>
+        <h3>Risk models</h3>
+        <p>Separate scores for several chronic conditions from one visit-style set of inputs.</p>
+      </div>
+      <div class="box">
+        <span class="emoji">🌐</span>
+        <h3>Live Streamlit app</h3>
+        <p>A browser UI where anyone can try sample scenarios and see demo risk scores.</p>
+      </div>
+      <div class="box">
+        <span class="emoji">📂</span>
+        <h3>Open GitHub repo</h3>
+        <p>Code, model files, and docs you can clone, study, and extend for class or portfolio work.</p>
+      </div>
+    </div>
+
+    <h2>Which conditions appear in the demo?</h2>
+    <p>All labels are synthetic training targets, not real diagnoses:</p>
+    <div class="tags">
+      <span class="tag">Type 2 diabetes</span>
+      <span class="tag">Chronic kidney disease</span>
+      <span class="tag">Coronary artery disease</span>
+      <span class="tag">Heart failure</span>
+      <span class="tag">Hypertension</span>
+      <span class="tag">COPD</span>
+      <span class="tag">Liver disease / MASLD</span>
+      <span class="tag">Rheumatoid arthritis</span>
+      <span class="tag">Hypothyroidism</span>
+      <span class="tag">Cognitive decline</span>
+    </div>
+
+    <h2>How the pipeline works</h2>
+    <p>You can think of the whole project as five clear steps:</p>
+    <ol class="pipeline">
+      <li>
+        <strong>Generate synthetic data</strong>
+        Code invents people, risk factors, disease progression, lab patterns, and delayed “observed” diagnoses.
+      </li>
+      <li>
+        <strong>Split by person, not by row</strong>
+        Train / validation / test sets keep each synthetic patient in only one bucket—so models are not tested on the same people they learned from.
+      </li>
+      <li>
+        <strong>Train multi-disease models</strong>
+        Each condition gets a risk head. Inputs include age, lifestyle, vitals, symptoms, family history, and optional labs.
+      </li>
+      <li>
+        <strong>Export a tiny fast model</strong>
+        Coefficients go into a small JSON file so the website can start quickly with lightweight libraries.
+      </li>
+      <li>
+        <strong>Publish a Streamlit app</strong>
+        Users fill a form, click run, and see ranked demo probabilities—with disclaimers on every important screen.
+      </li>
+    </ol>
+
+    <h2>What the live app looks like</h2>
+    <ul>
+      <li><strong>Home</strong> — project story and safety banner</li>
+      <li><strong>Risk prediction</strong> — form for a “what-if” scenario</li>
+      <li><strong>Model metrics</strong> — scores on held-out synthetic data</li>
+      <li><strong>About &amp; limits</strong> — intended vs prohibited uses</li>
+    </ul>
+    <p>
+      A high score only means: “In our synthetic training world, similar patterns often matched this label.”
+      It does <strong>not</strong> mean a real person has that disease.
+    </p>
+
+    <div class="cta">
+      <h3>Try the project</h3>
+      <a class="button" href="https://synthocare.streamlit.app/" target="_blank" rel="noopener">Open live app</a>
+      <a class="button secondary" href="https://github.com/Ganapathy-bot/synthocare-risk-lab" target="_blank" rel="noopener">View on GitHub</a>
+      <p>
+        Free Streamlit hosting can be slow after idle time, or temporarily reduce CPU if the platform is busy.
+        For a snappy demo, run the app on your laptop from the GitHub repo.
+      </p>
+    </div>
+
+    <h3>Run it on your computer</h3>
+    <pre><code>git clone https://github.com/Ganapathy-bot/synthocare-risk-lab.git
+cd synthocare-risk-lab
+pip install -r requirements.txt
+streamlit run streamlit_app.py</code></pre>
+    <p>Then open <code>http://localhost:8501</code>.</p>
+
+    <h2>Who should use this?</h2>
+    <ul>
+      <li>Students learning healthcare ML</li>
+      <li>Engineers practicing safe data pipelines</li>
+      <li>Teachers who need an interactive classroom demo</li>
+      <li>Builders prototyping risk-dashboard UX with non-sensitive data</li>
+    </ul>
+
+    <h2>Who should <em>not</em> use this for care?</h2>
+    <ul>
+      <li>Clinicians seeking decision support for real patients</li>
+      <li>Anyone expecting population statistics from a real country or hospital</li>
+      <li>Teams wanting regulatory-ready medical software out of the box</li>
+    </ul>
+
+    <h2>Four lessons worth remembering</h2>
+    <div class="takeaways">
+      <h3>Takeaways</h3>
+      <ol>
+        <li><strong>Privacy first</strong> — synthetic data lets you practice without exposing people.</li>
+        <li><strong>Split carefully</strong> — patient-level train/test splits fight leakage.</li>
+        <li><strong>Good metrics ≠ clinical usefulness</strong> — synthetic AUROC is not bedside proof.</li>
+        <li><strong>Label the product honestly</strong> — demos should shout limits as loudly as features.</li>
+      </ol>
+    </div>
+
+    <h2>FAQ</h2>
+    <div class="faq">
+      <details>
+        <summary>Is this real hospital data?</summary>
+        <p>No. Every “patient” is generated by code for research and teaching.</p>
+      </details>
+      <details>
+        <summary>Can this diagnose someone?</summary>
+        <p>No. It is not clinically validated and is not for patient care.</p>
+      </details>
+      <details>
+        <summary>Why multiple disease scores?</summary>
+        <p>Chronic conditions often travel together. The demo shows multi-condition outputs, not one final diagnosis.</p>
+      </details>
+      <details>
+        <summary>Why is the website sometimes slow?</summary>
+        <p>Free Streamlit Cloud can cold-start or throttle CPU. That is hosting behavior. Local runs are usually smoother.</p>
+      </details>
+      <details>
+        <summary>Can I reuse the code?</summary>
+        <p>Yes. The repo is open on GitHub. Keep the synthetic-data disclaimer if you remix or republish the demo.</p>
+      </details>
+    </div>
+
+    <h2>Final word</h2>
+    <p>
+      Healthcare AI needs safe places to learn. SynthoCare Risk Lab is one of those places:
+      realistic enough for pipeline practice, honest enough to say
+      <strong>“synthetic only — not for clinical use.”</strong>
+    </p>
+    <p>
+      Explore the live demo, read the code, break things, rebuild them—and when you move toward real-world health AI,
+      bring the same discipline: privacy, careful evaluation, and external clinical validation.
+    </p>
+
+    <footer class="post-footer">
+      <p>
+        <strong>SynthoCare Risk Lab</strong><br />
+        Live app: <a href="https://synthocare.streamlit.app/">https://synthocare.streamlit.app/</a><br />
+        GitHub: <a href="https://github.com/Ganapathy-bot/synthocare-risk-lab">https://github.com/Ganapathy-bot/synthocare-risk-lab</a>
+      </p>
+      <p style="margin-bottom:0;">
+        This HTML file is ready to publish as a blog post, class handout, or LinkedIn article draft.
+        Please keep the safety disclaimer when you share it.
+      </p>
+    </footer>
+  </main>
+
+</body>
+</html>
